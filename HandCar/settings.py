@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import keys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -131,9 +131,9 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-TWILIO_ACCOUNT_SID = 'AC01f4904443a71bd9ec42802583492d25'
-TWILIO_AUTH_TOKEN = 'ad4d577f741fcf2651a611cb1964da52'
-TWILIO_PHONE_NUMBER = '+1 951 999 4404'
+TWILIO_ACCOUNT_SID = keys.ACCOUNT_SID
+TWILIO_AUTH_TOKEN = keys.AUTH_TOKEN
+TWILIO_PHONE_NUMBER = keys.PHONE_NUMBER
 
 
 
