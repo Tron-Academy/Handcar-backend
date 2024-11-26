@@ -13,8 +13,13 @@ urlpatterns = [
     path('searchproducts/', views.product_search, name='product_search'),
     path('filter/products', views.filter_products, name='filter_products'),
     path('subscribe/', views.subscribe, name='subscribe'),
-    path('viewcartitems', views.display_cart, name='display_cart'),
-    path('removecart', views.remove_cart_item, name='remove_cart_item')
+    path('viewcartitems/', views.display_cart, name='display_cart'),
+    path('removecart/', views.remove_cart_item, name='remove_cart_item'),
+    path('add_review/<int:product_id>/', views.add_review, name= 'add_review'),
+    path('add_category', views.add_category, name='add_category'),
+    path('view_category', views.view_categories, name='view_categories'),
+    path('view_product', views.view_products, name='view_products')
+
 ]
 
 

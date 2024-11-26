@@ -1,8 +1,10 @@
+import json
 from random import random
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import make_password
 from django.core.validators import validate_email
+from django.db import IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
@@ -11,12 +13,16 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from requests import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from twilio.rest import Client
 import random
 from django.core.cache import cache
-from rest_framework import serializers
+from rest_framework import serializers, status
 from django.contrib.auth.models import User
-from .models import Product, WishlistItem, CartItem
+from .models import Product, WishlistItem, CartItem, Review, Address, Category
+from .serializers import AddressSerializer
 
 
 @csrf_exempt
@@ -155,6 +161,44 @@ def login_with_otp(request):
             return JsonResponse({'error': 'Invalid OTP'}, status=400)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+# def view_products(request):
+#     if request.method == 'GET':
+#         search_query = request.GET.get('search', '')
+#         if search_query:
+#             product = Product.objects.filter(name__icontains=search_query)
+#         else:
+#             product = Product.objects.all()
+#             data = [{"id": cat.id, "name": cat.name, "category": cat.category, "brand":cat.brand, "price": cat.price, "image": cat.image, "description": cat.description, "is_bestseller":cat.is_bestseller} for cat in product]
+#         return JsonResponse({"product": data}, safe=False)
+
+
+from django.http import JsonResponse
+from .models import Product
+
+def view_products(request):
+    if request.method == 'GET':
+        search_query = request.GET.get('search', '')
+        if search_query:
+            products = Product.objects.filter(name__icontains=search_query)
+        else:
+            products = Product.objects.all()
+
+        data = [
+            {
+                "id": product.id,
+                "name": product.name,
+                "category": product.category.name if product.category else None,  # Extract category name
+                "brand": product.brand.name if product.brand else None,          # Handle foreign key for brand
+                "price": product.price,
+                "image": product.image.url if product.image else None,
+                "description": product.description,
+                "is_bestseller": product.is_bestseller,
+            }
+            for product in products
+        ]
+        return JsonResponse({"product": data}, safe=False)
+
 
 
 @csrf_exempt
@@ -354,6 +398,7 @@ def display_cart(request):
 
     return JsonResponse({'error': 'User not authenticated'}, status=401)
 
+
 def remove_cart_item(request, item_id):
     if request.user.is_authenticated:
         # Get the cart item based on the ID and user
@@ -387,3 +432,83 @@ def remove_cart_item(request, item_id):
 
     return JsonResponse({'error': 'User not authenticated'}, status=401)
 
+
+@csrf_exempt
+@login_required
+def add_review(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+
+    # Parse JSON data from the request body
+    try:
+        data = json.loads(request.body)
+        rating = data.get('rating')
+        comment = data.get('comment')
+
+        # Validate that required fields are provided
+        if rating is None or not isinstance(rating, int) or not (1 <= rating <= 5):
+            return JsonResponse({'error': 'Rating must be an integer between 1 and 5.'}, status=400)
+
+        # Optional comment validation if needed
+        if comment and not isinstance(comment, str):
+            return JsonResponse({'error': 'Comment must be a string.'}, status=400)
+
+        # Attempt to create a new review
+        try:
+            review = Review.objects.create(
+                product=product,
+                user=request.user,
+                rating=rating,
+                comment=comment
+            )
+            return JsonResponse({'message': 'Review added successfully.', 'review_id': review.id}, status=201)
+
+        except IntegrityError:
+            return JsonResponse({'error': 'You have already reviewed this product. Please edit your existing review.'},
+                                status=400)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data.'}, status=400)
+
+
+@csrf_exempt
+def add_category(request):
+    if request.method == 'POST':
+        try:
+            # Check if the request body exists
+            if not request.body:
+                return JsonResponse({"error": "Request body is empty"}, status=400)
+
+            # Attempt to parse JSON
+            data = json.loads(request.body)
+
+            # Extract fields
+            name = data.get('name')
+
+
+            # Validate required fields
+            if not name:
+                return JsonResponse({"error": "Name is required"}, status=400)
+
+            # Create the category
+            category = Category.objects.create(name=name)
+            return JsonResponse({"id": category.id, "name": category.name},
+                                status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON format"}, status=400)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method"}, status=405)
+
+
+def view_categories(request):
+    if request.method == 'GET':
+        search_query = request.GET.get('search', '')
+        if search_query:
+            categories = Category.objects.filter(name__icontains=search_query)
+        else:
+            categories = Category.objects.all()
+        data = [{"id": cat.id, "name": cat.name, "description": cat.description} for cat in categories]
+        return JsonResponse({"categories": data}, safe=False)

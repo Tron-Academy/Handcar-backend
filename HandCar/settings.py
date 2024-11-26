@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-import keys
+from . import keys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-g*6$8q350_^v7k=e-%ky4$&nn48ds8=&mvpqi5&)j=d_n5b(b!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [ '127.0.0.1']
 
 
 # Application definition
@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'App1',
-    'rest_framework'
+    'rest_framework',
+    'corsheaders'
 ]
 
 MIDDLEWARE = [
@@ -49,6 +50,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware'
 ]
 
 ROOT_URLCONF = 'HandCar.urls'
@@ -144,3 +146,8 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'parvathynair186@gmail.com'  # Your email address
 EMAIL_HOST_PASSWORD = 'wkxv jmop yrha ldnq'  # Your email password
 DEFAULT_FROM_EMAIL = 'parvathynair186@gmail.com'  # Default sender email
+
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+]
