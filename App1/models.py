@@ -2,6 +2,8 @@
 from datetime import timedelta, date
 
 from django.contrib.auth.models import User
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 
 from rest_framework import serializers
 from django.utils import timezone
@@ -24,11 +26,11 @@ class Brand(models.Model):
         return self.name
 
 class Product(models.Model):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=2000)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     brand = models.ForeignKey(Brand, on_delete=models.CASCADE)
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    image = models.ImageField(upload_to='product_images/', blank=True, null=True)  # For product images
+    image = models.URLField(max_length=2000, blank=True, null=True)  # Use URLField for Cloudinary URLs
     description = models.TextField(blank=True)
     is_bestseller = models.BooleanField(default=False)
     discount_percentage = models.IntegerField(default=0)
@@ -150,5 +152,4 @@ class Address(models.Model):
 
     def __str__(self):
         return f"{self.street}, {self.city}, {self.state}, {self.zip_code}, {self.country}"
-
 
