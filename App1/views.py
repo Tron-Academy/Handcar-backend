@@ -21,7 +21,7 @@ import random
 from django.core.cache import cache
 from rest_framework import serializers, status
 from django.contrib.auth.models import User
-from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand
+from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand,Vendor, Coupon, Plan
 from .serializers import AddressSerializer
 
 
@@ -661,72 +661,709 @@ def delete_brand(request, brand_id):
 
 
 from cloudinary.uploader import upload
+# @csrf_exempt
+# def add_product(request):
+#     if request.method == 'POST':
+#         try:
+#             # Check if the request contains files and form-data
+#             if request.FILES.get('image'):  # Check for image file
+#                 image_file = request.FILES['image']
+#             else:
+#                 image_file = None  # In case no image is uploaded
+#
+#             # Get other data from the form (using request.POST)
+#             name = request.POST.get('name')
+#             category_id = request.POST.get('category_id')
+#             brand_id = request.POST.get('brand_id')
+#             price = request.POST.get('price')
+#             description = request.POST.get('description', '')
+#             is_bestseller = request.POST.get('is_bestseller', False)
+#             discount_percentage = request.POST.get('discount_percentage', 0)
+#
+#             # Validate required fields
+#             if not name or not category_id or not brand_id or not price:
+#                 return JsonResponse({"error": "Name, category_id, brand_id, and price are required."}, status=400)
+#
+#             # Retrieve related objects
+#             category = get_object_or_404(Category, id=category_id)
+#             brand = get_object_or_404(Brand, id=brand_id)
+#
+#             # Handle image upload to Cloudinary
+#             image_url = None
+#             if image_file:
+#                 try:
+#                     upload_result = upload(image_file, folder="product_images/")
+#                     image_url = upload_result['secure_url']
+#                 except Exception as e:
+#                     return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
+#
+#             # Create the Product instance
+#             product = Product.objects.create(
+#                 name=name,
+#                 category=category,
+#                 brand=brand,
+#                 price=price,
+#                 description=description,
+#                 is_bestseller=is_bestseller,
+#                 discount_percentage=discount_percentage,
+#                 image=image_url  # Save the Cloudinary image URL
+#             )
+#
+#             return JsonResponse({
+#                 "message": "Product added successfully.",
+#                 "product": {
+#                     "id": product.id,
+#                     "name": product.name,
+#                     "category": product.category.name,
+#                     "brand": product.brand.name,
+#                     "price": str(product.price),
+#                     "description": product.description,
+#                     "is_bestseller": product.is_bestseller,
+#                     "discount_percentage": product.discount_percentage,
+#                     "image": product.image,  # Return Cloudinary image URL
+#                     "created_at": product.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+#                 }
+#             }, status=201)
+#
+#         except Exception as e:
+#             return JsonResponse({"error": str(e)}, status=500)
+#
+#     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+#
+
+# from django.shortcuts import get_object_or_404
+# from django.http import JsonResponse
+# from cloudinary.uploader import upload
+# from .models import Product, Category, Brand
+# from django.views.decorators.csrf import csrf_exempt
+# import json
+#
+# @csrf_exempt
+# def add_product(request):
+#     if request.method == 'POST':
+#         try:
+#             # Check if the request contains files and form-data
+#             if request.FILES.get('image'):  # Check for image file
+#                 image_file = request.FILES['image']
+#             else:
+#                 image_file = None  # In case no image is uploaded
+#
+#             # Get other data from the form (using request.POST)
+#             name = request.POST.get('name')
+#             category_name = request.POST.get('category_name')  # Use name instead of ID
+#             brand_name = request.POST.get('brand_name')        # Use name instead of ID
+#             price = request.POST.get('price')
+#             description = request.POST.get('description', '')
+#             is_bestseller = request.POST.get('is_bestseller', False)
+#             discount_percentage = request.POST.get('discount_percentage', 0)
+#
+#             # Validate required fields
+#             if not name or not category_name or not brand_name or not price:
+#                 return JsonResponse({"error": "Name, category_name, brand_name, and price are required."}, status=400)
+#
+#             # Retrieve related objects by name
+#             category = get_object_or_404(Category, name=category_name)
+#             brand = get_object_or_404(Brand, name=brand_name)
+#
+#             # Handle image upload to Cloudinary
+#             image_url = None
+#             if image_file:
+#                 try:
+#                     upload_result = upload(image_file, folder="product_images/")
+#                     image_url = upload_result['secure_url']
+#                 except Exception as e:
+#                     return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
+#
+#             # Create the Product instance
+#             product = Product.objects.create(
+#                 name=name,
+#                 category=category,
+#                 brand=brand,
+#                 price=price,
+#                 description=description,
+#                 is_bestseller=is_bestseller,
+#                 discount_percentage=discount_percentage,
+#                 image=image_url  # Save the Cloudinary image URL
+#             )
+#
+#             return JsonResponse({
+#                 "message": "Product added successfully.",
+#                 "product": {
+#                     "id": product.id,
+#                     "name": product.name,
+#                     "category": product.category.name,
+#                     "brand": product.brand.name,
+#                     "price": str(product.price),
+#                     "description": product.description,
+#                     "is_bestseller": product.is_bestseller,
+#                     "discount_percentage": product.discount_percentage,
+#                     "image": product.image,  # Return Cloudinary image URL
+#                     "created_at": product.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+#                 }
+#             }, status=201)
+#
+#         except Exception as e:
+#             return JsonResponse({"error": str(e)}, status=500)
+#
+#     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
 @csrf_exempt
-def add_product(request):
-    if request.method == 'POST':
+def view_products(request):
+    if request.method == 'GET':
+        search_query = request.GET.get('search', '')
+        if search_query:
+            products = Product.objects.filter(name__icontains=search_query)
+        else:
+            products = Product.objects.all()
+        data = [{"id": product.id,
+                 "name": product.name,
+                 "category": product.category.name,
+                 "brand": product.brand.name,
+                 "price": product.price,
+                 "image": product.image,
+                 "description": product.description,
+                 "discount_percentage": product.discount_percentage} for product in products]
+        return JsonResponse({"product": data}, safe=False)
+    
+    
+
+@csrf_exempt
+def edit_product(request, product_id):
+    if request.method == 'PUT':
         try:
-            # Check if the request contains files and form-data
-            if request.FILES.get('image'):  # Check for image file
-                image_file = request.FILES['image']
-            else:
-                image_file = None  # In case no image is uploaded
+            # Retrieve the product to be edited
+            product = get_object_or_404(Product, id=product_id)
 
-            # Get other data from the form (using request.POST)
-            name = request.POST.get('name')
-            category_id = request.POST.get('category_id')
-            brand_id = request.POST.get('brand_id')
-            price = request.POST.get('price')
-            description = request.POST.get('description', '')
-            is_bestseller = request.POST.get('is_bestseller', False)
-            discount_percentage = request.POST.get('discount_percentage', 0)
+            # Parse JSON data
+            data = json.loads(request.body)
 
-            # Validate required fields
-            if not name or not category_id or not brand_id or not price:
-                return JsonResponse({"error": "Name, category_id, brand_id, and price are required."}, status=400)
+            # Update fields if provided
+            product.name = data.get('name', product.name)
+            category_id = data.get('category_id')
+            if category_id:
+                product.category = get_object_or_404(Category, id=category_id)
+            brand_id = data.get('brand_id')
+            if brand_id:
+                product.brand = get_object_or_404(Brand, id=brand_id)
+                product.price = data.get('price', product.price)
+                product.description = data.get('description', product.description)
+                product.is_bestseller = data.get('is_bestseller', product.is_bestseller)
+                product.discount_percentage = data.get('discount_percentage', product.discount_percentage)
 
-            # Retrieve related objects
-            category = get_object_or_404(Category, id=category_id)
-            brand = get_object_or_404(Brand, id=brand_id)
+            # Save the updated product
+            product.save()
 
-            # Handle image upload to Cloudinary
-            image_url = None
-            if image_file:
-                try:
-                    upload_result = upload(image_file, folder="product_images/")
-                    image_url = upload_result['secure_url']
-                except Exception as e:
-                    return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
-
-            # Create the Product instance
-            product = Product.objects.create(
-                name=name,
-                category=category,
-                brand=brand,
-                price=price,
-                description=description,
-                is_bestseller=is_bestseller,
-                discount_percentage=discount_percentage,
-                image=image_url  # Save the Cloudinary image URL
-            )
-
-            return JsonResponse({
-                "message": "Product added successfully.",
-                "product": {
-                    "id": product.id,
-                    "name": product.name,
-                    "category": product.category.name,
-                    "brand": product.brand.name,
-                    "price": str(product.price),
-                    "description": product.description,
-                    "is_bestseller": product.is_bestseller,
-                    "discount_percentage": product.discount_percentage,
-                    "image": product.image,  # Return Cloudinary image URL
-                    "created_at": product.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                }
-            }, status=201)
+            return JsonResponse({"message": "Product updated successfully."}, status=200)
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
 
+
+@csrf_exempt
+def delete_product(request, product_id):
+    if request.method == 'DELETE':
+        try:
+            # Retrieve the category instance by ID
+            products = get_object_or_404(Product, id=product_id)
+
+            # Delete the category
+            products.delete()
+
+            return JsonResponse({"message": "Product deleted successfully"}, status=200)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Invalid HTTP method"}, status=405)
+
+
+
+@csrf_exempt
+def add_vendor(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON data from the request body
+            data = json.loads(request.body)
+
+            vendor_name = data.get('vendor_name')
+            phone_number = data.get('phone_number')
+            email = data.get('email')
+            password = data.get('password')
+
+            # Validate required fields
+            if not vendor_name or not phone_number or not email or not password:
+                return JsonResponse({"error": "All fields are required."}, status=400)
+
+            # Validate email format
+            try:
+                validate_email(email)
+            except ValidationError:
+                return JsonResponse({"error": "Invalid email format."}, status=400)
+
+            # Check if email already exists
+            if Vendor.objects.filter(email=email).exists():
+                return JsonResponse({"error": "Email already exists."}, status=400)
+
+            # Create the vendor
+            vendor = Vendor.objects.create(
+                vendor_name=vendor_name,
+                phone_number=phone_number,
+                email=email,
+                password=password  # In production, hash passwords before saving!
+            )
+
+            return JsonResponse({
+                "message": "Vendor added successfully.",
+                "vendor": {
+                    "id": vendor.id,
+                    "vendor_name": vendor.vendor_name,
+                    "phone_number": vendor.phone_number,
+                    "email": vendor.email,
+                }
+            }, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data."}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+
+@csrf_exempt
+def view_vendors(request):
+    if request.method == 'GET':
+        search_query = request.GET.get('search', '')
+        if search_query:
+            vendors = Vendor.objects.filter(name__icontains=search_query)
+        else:
+            vendors = Vendor.objects.all()
+        data = [{"id": vendor.id,
+                 "name": vendor.vendor_name,
+                 "price": vendor.phone_number,
+                 "email": vendor.email,
+                 "password": vendor.password} for vendor in vendors]
+        return JsonResponse({"vendor": data}, safe=False)
+
+
+
+@csrf_exempt
+def edit_vendor(request, vendor_id):
+    if request.method == 'PUT':
+        try:
+            # Retrieve the vendor to be edited
+            vendor = get_object_or_404(Vendor, id=vendor_id)
+
+            # Parse JSON data
+            data = json.loads(request.body)
+
+            # Update fields if provided
+            vendor.vendor_name = data.get('vendor_name', vendor.vendor_name)  # Update name
+            vendor.email = data.get('email', vendor.email)  # Update email
+            vendor.password = data.get('password', vendor.password)  # Update password
+            vendor.phone_number = data.get('phone_number', vendor.phone_number)  # Update phone number
+
+            # Log the updated values
+            # print("Updated Vendor Data:", vendor.vendor_name, vendor.email, vendor.phone_number, vendor.password)
+
+            # Save the updated vendor
+            vendor.save()
+
+            return JsonResponse({"message": "Vendor updated successfully."}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+
+
+@csrf_exempt
+def delete_vendor(request, vendor_id):
+    if request.method == 'DELETE':
+        try:
+            # Retrieve the vendor instance by ID
+            vendors = get_object_or_404(Vendor, id=vendor_id)
+
+            # Delete the vendor
+            vendors.delete()
+
+            return JsonResponse({"message": "Vendor deleted successfully"}, status=200)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Invalid HTTP method"}, status=405)
+
+
+@csrf_exempt
+def add_coupon(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON data from the request body
+            data = json.loads(request.body)
+
+            name = data.get('name')
+            coupon_code = data.get('coupon_code')
+            discount_percentage = data.get('discount_percentage')
+            start_date = data.get('start_date')
+            end_date = data.get('end_date')
+            description = data.get('description')
+
+            # Validate required fields
+            if not name or not coupon_code or not discount_percentage or not start_date or not end_date or not description:
+                return JsonResponse({"error": "All fields are required."}, status=400)
+
+            # Create the vendor
+            coupon = Coupon.objects.create(
+                name=name,
+                coupon_code=coupon_code,
+                discount_percentage=discount_percentage,
+                start_date=start_date,
+                end_date = end_date,
+                description = description
+            )
+
+            return JsonResponse({
+                "message": "Coupon added successfully.",
+                "coupon": {
+                    "id": coupon.id,
+                    "name": coupon.name,
+                    "coupon_code": coupon.coupon_code,
+                    "discount_percentage": coupon.discount_percentage,
+                    "start_date": coupon.start_date,
+                    "end_date": coupon.end_date,
+                    "description": coupon.description
+                }
+            }, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data."}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+
+
+@csrf_exempt
+def view_coupons(request):
+    if request.method == 'GET':
+        search_query = request.GET.get('search', '')
+        if search_query:
+            coupons = Coupon.objects.filter(name__icontains=search_query)
+        else:
+            coupons = Coupon.objects.all()
+        data = [{   "id": coupon.id,
+                    "name": coupon.name,
+                    "coupon_code": coupon.coupon_code,
+                    "discount_percentage": coupon.discount_percentage,
+                    "start_date": coupon.start_date,
+                    "end_date": coupon.end_date,
+                    "description": coupon.description} for coupon in coupons]
+        return JsonResponse({"coupon": data}, safe=False)
+
+
+
+@csrf_exempt
+def edit_coupons(request, coupon_id):
+    if request.method == 'PUT':
+        try:
+            # Retrieve the vendor to be edited
+            coupons = get_object_or_404(Coupon, id=coupon_id)
+
+            # Parse JSON data
+            data = json.loads(request.body)
+
+            # Update fields if provided
+            coupons.name = data.get('name', coupons.name)
+            coupons.coupon_code = data.get('coupon_code', coupons.coupon_code)
+            coupons.discount_percentage = data.get('discount_percentage', coupons.discount_percentage)
+            coupons.start_date = data.get('start_date', coupons.start_date)
+            coupons.end_date = data.get('end_date', coupons.end_date)
+            coupons.description = data.get('description', coupons.description)
+
+            # Log the updated values
+            print("Updated Coupon Data:", coupons.name, coupons.coupon_code, coupons.discount_percentage)
+
+            # Save the updated coupon
+            coupons.save()
+
+            return JsonResponse({"message": "Coupon updated successfully."}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+
+
+@csrf_exempt
+def delete_coupons(request, coupon_id):
+    if request.method == 'DELETE':
+        try:
+            # Retrieve the coupon instance by ID
+            coupon = get_object_or_404(Coupon, id=coupon_id)
+
+            # Delete the coupon
+            coupon.delete()
+
+            return JsonResponse({"message": "Coupon deleted successfully"}, status=200)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Invalid HTTP method"}, status=405)
+
+
+@csrf_exempt
+def add_plan(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON data from the request body
+            data = json.loads(request.body)
+
+            name = data.get('name')
+            service_type = data.get('service_type')
+            duration = data.get('duration')
+            price = data.get('price')
+            description = data.get('description')
+
+
+            # Validate required fields
+            if not name or not service_type or not duration or not price or not description:
+                return JsonResponse({"error": "All fields are required."}, status=400)
+
+            # Create the vendor
+            plan = Plan.objects.create(
+                name=name,
+                service_type=service_type,
+                duration=duration,
+                price=price,
+                description = description
+            )
+
+            return JsonResponse({
+                "message": "Plan added successfully.",
+                "coupon": {
+                    "id": plan.id,
+                    "name": plan.name,
+                    "service_type": plan.service_type,
+                    "duration": plan.duration,
+                    "price": plan.price,
+                    "description": plan.description
+                }
+            }, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data."}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+
+
+@csrf_exempt
+def view_plans(request):
+    if request.method == 'GET':
+        search_query = request.GET.get('search', '')
+        if search_query:
+            plans = Plan.objects.filter(name__icontains=search_query)
+        else:
+            plans = Plan.objects.all()
+        data = [{  "id": plan.id,
+                    "name": plan.name,
+                    "service_type": plan.service_type,
+                    "duration": plan.duration,
+                    "price": plan.price,
+                    "description": plan.description} for plan in plans]
+        return JsonResponse({"plan": data}, safe=False)
+
+
+
+@csrf_exempt
+def edit_plan(request, plan_id):
+    if request.method == 'PUT':
+        try:
+            # Retrieve the plan to be edited
+            plans = get_object_or_404(Plan, id=plan_id)
+
+            # Parse JSON data
+            data = json.loads(request.body)
+
+            # Update fields if provided
+            plans.name = data.get('name', plans.name)
+            plans.service_type = data.get('service_type', plans.service_type)
+            plans.duration = data.get('duration', plans.duration)
+            plans.price = data.get('price', plans.price)
+            plans.description = data.get('description', plans.description)
+
+            # Save the updated plan
+            plans.save()
+
+            return JsonResponse({"message": "Coupon updated successfully."}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+
+
+@csrf_exempt
+def delete_plan(request, plan_id):
+    if request.method == 'DELETE':
+        try:
+            # Retrieve the coupon instance by ID
+            plan = get_object_or_404(Plan, id=plan_id)
+
+            # Delete the coupon
+            plan.delete()
+
+            return JsonResponse({"message": "Plan deleted successfully"}, status=200)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Invalid HTTP method"}, status=405)
+
+@csrf_exempt
+def search_products(request):
+    query = request.GET.get('query', '')  # Get the search query from the request
+    products = Product.objects.filter(name__icontains=query)  # Filter products by name
+    # You can add more filters like category or brand here
+    results = [
+        {
+            "id": product.id,
+            "name": product.name,
+            "category": product.category.name,
+            "brand": product.brand.name,
+            "price": float(product.price),
+            "promoted": product.promoted,
+        }
+        for product in products
+    ]
+    return JsonResponse({"products": results})
+
+
+@csrf_exempt
+def promote_product(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        product_id = data.get('product_id')
+        product = get_object_or_404(Product, id=product_id)
+        product.promoted = True  # Mark as promoted
+        product.save()
+        return JsonResponse({"message": "Product promoted successfully!", "promoted": True})
+    return JsonResponse({"error": "Invalid request method"}, status=400)
+
+
+def view_promoted_products(request):
+    if request.method == 'GET':
+        # Filter products where promoted is True
+        promoted_products = Product.objects.filter(promoted=True)
+
+        promoted_products_list = [
+            {
+                "id": product.id,
+                "name": product.name,
+                "category": product.category.name,
+                "brand": product.brand.name,
+                "price": str(product.price),
+                "description": product.description,
+                "is_bestseller": product.is_bestseller,
+                "discount_percentage": product.discount_percentage,
+                "image": product.image,
+                "created_at": product.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            }
+            for product in promoted_products
+        ]
+
+        return JsonResponse({"promoted_products": promoted_products_list}, status=200)
+
+    return JsonResponse({"error": "Invalid request method"}, status=400)
+
+
+@csrf_exempt
+def remove_promoted_product(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)  # Parse the JSON request body
+            product_id = data.get('product_id')  # Get the product ID from the request
+            product = get_object_or_404(Product, id=product_id)  # Retrieve the product
+
+            if product.promoted:  # Check if the product is currently promoted
+                product.promoted = False  # Set promoted to False
+                product.save()  # Save the updated product
+                return JsonResponse({"message": "Product removed from promoted successfully!", "promoted": False})
+            else:
+                return JsonResponse({"message": "Product is not promoted.", "promoted": False})
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=400)
+
+
+def search_brands(request):
+    query = request.GET.get('query','')
+    brand = Brand.objects.filter(name__icontains=query)
+    results = [
+        {
+            "id": brands.id,
+            "name": brands.name,
+            "promoted": brands.promoted,
+        }
+        for brands in brand
+    ]
+    return JsonResponse({"brand": results})
+
+@csrf_exempt
+def promote_brand(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        brand_id = data.get('brand_id')
+        brand = get_object_or_404(Brand, id=brand_id)
+        brand.promoted = True  # Mark as promoted
+        brand.save()
+        return JsonResponse({"message": "Brand promoted successfully!", "promoted": True})
+    return JsonResponse({"error": "Invalid request method"}, status=400)
+
+
+def view_promoted_brands(request):
+    if request.method == 'GET':
+        # Filter products where promoted is True
+        promoted_brands = Brand.objects.filter(promoted=True)
+
+        promoted_brands_list = [
+            {
+                "id": brand.id,
+                "name": brand.name
+
+            }
+            for brand in promoted_brands
+        ]
+
+        return JsonResponse({"promoted_products": promoted_brands_list}, status=200)
+
+    return JsonResponse({"error": "Invalid request method"}, status=400)
+
+
+@csrf_exempt
+def remove_promoted_brand(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)  # Parse the JSON request body
+            brand_id = data.get('brand_id')  # Get the brand ID from the request
+            brand = get_object_or_404(Brand, id=brand_id)  # Retrieve the brand
+
+            if brand.promoted:  # Check if the brand is currently promoted
+                brand.promoted = False  # Set promoted to False
+                brand.save()  # Save the updated brand
+                return JsonResponse({"message": "Brand removed from promoted successfully!", "promoted": False})
+            else:
+                return JsonResponse({"message": "Brand is not promoted.", "promoted": False})
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=400)
