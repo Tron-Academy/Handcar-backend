@@ -157,14 +157,19 @@ class Address(models.Model):
     def __str__(self):
         return f"{self.street}, {self.city}, {self.state}, {self.zip_code}, {self.country}"
 
+
 class Vendor(models.Model):
     vendor_name = models.CharField(max_length=255)
     phone_number = models.CharField(max_length=15, unique=True)  # Assuming a phone number format
     email = models.EmailField(unique=True)
-    password = models.CharField(max_length=255)  # Hash the password before saving in production
+    password = models.CharField(max_length=255)  # Should be hashed in production
+    location = models.TextField(blank=True, null=True)  # Allow location to be added later
+    whatsapp_number = models.CharField(max_length=15, blank=True, null=True)  # Optional, can be added later
+    updated_at = models.DateTimeField(auto_now=True)  # Track when the vendor was last updated
 
     def __str__(self):
         return self.vendor_name
+
 
 class Coupon(models.Model):
     name = models.CharField(max_length=100)
@@ -191,3 +196,23 @@ class Plan(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Subscriber(models.Model):
+    email = models.EmailField()
+    postal_code = models.CharField(max_length=20, default='null')
+    service_type = models.CharField(max_length=100)
+    plan = models.CharField(max_length=100)
+    duration = models.IntegerField(help_text="Duration in months")
+    start_date = models.DateField()
+    end_date = models.DateField(blank=True, null=True, help_text="Calculated based on duration and start_date")
+    assigned_vendor = models.CharField(max_length=100, help_text="Name of the assigned vendor", blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        # Automatically calculate the end_date based on start_date and duration
+        if self.start_date and self.duration:
+            self.end_date = self.start_date + timedelta(days=self.duration * 30)  # Approximation: 30 days per month
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.email

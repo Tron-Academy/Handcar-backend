@@ -44,10 +44,13 @@ urlpatterns = [
     path('search_products', views.search_products, name='search_products'),
     path('promote_product', views.promote_product, name='promote_product'),
     path('view_promoted_products', views.view_promoted_products, name='view_promoted_products'),
-    path('remove_promoted_product', views.remove_promoted_product, name='remove_promoted_product'),    path('search_brands', views.search_brands, name='search_brands'),
+    path('remove_promoted_product', views.remove_promoted_product, name='remove_promoted_product'),
+    path('search_brands', views.search_brands, name='search_brands'),
     path('promote_brand', views.promote_brand, name='promote_brand'),
     path('view_promoted_brands', views.view_promoted_brands, name='view_promoted_brands'),
-    path('remove_promoted_brand', views.remove_promoted_brand, name='remove_promoted_brand')
+    path('remove_promoted_brand', views.remove_promoted_brand, name='remove_promoted_brand'),
+    path('add_subscriber', views.add_subscriber, name='add_subscriber'),
+    path('edit_vendor/<int:vendor_id>/', views.edit_vendor, name='edit_vendor')
 ]
 
 

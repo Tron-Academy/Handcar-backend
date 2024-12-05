@@ -9,6 +9,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
+from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.models import User
 from django.core.validators import validate_email
@@ -21,7 +22,7 @@ import random
 from django.core.cache import cache
 from rest_framework import serializers, status
 from django.contrib.auth.models import User
-from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand,Vendor, Coupon, Plan
+from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand,Vendor, Coupon, Plan, Subscriber
 from .serializers import AddressSerializer
 
 
@@ -647,7 +648,7 @@ def delete_brand(request, brand_id):
     if request.method == 'DELETE':
         try:
             # Retrieve the category instance by ID
-            brand = get_object_or_404(Category, id=brand_id)
+            brand = get_object_or_404(Brand, id=brand_id)
 
             # Delete the category
             brand.delete()
@@ -910,7 +911,7 @@ def add_vendor(request):
                 vendor_name=vendor_name,
                 phone_number=phone_number,
                 email=email,
-                password=password  # In production, hash passwords before saving!
+                password=password
             )
 
             return JsonResponse({
@@ -931,26 +932,59 @@ def add_vendor(request):
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
 
 
+# @csrf_exempt
+# def view_vendors(request):
+#     if request.method == 'GET':
+#         search_query = request.GET.get('search', '')
+#         if search_query:
+#             vendors = Vendor.objects.filter(name__icontains=search_query)
+#         else:
+#             vendors = Vendor.objects.all()
+#         data = [{"id": vendor.id,
+#                  "name": vendor.vendor_name,
+#                  "price": vendor.phone_number,
+#                  "email": vendor.email} for vendor in vendors]
+#         return JsonResponse({"vendor": data}, safe=False)
+
+
+
 @csrf_exempt
 def view_vendors(request):
     if request.method == 'GET':
-        search_query = request.GET.get('search', '')
+        search_query = request.GET.get('search', '').strip()
+        print("Search Query:", search_query)  # Debugging
         if search_query:
-            vendors = Vendor.objects.filter(name__icontains=search_query)
+            vendors = Vendor.objects.filter(vendor_name__icontains=search_query)
         else:
             vendors = Vendor.objects.all()
         data = [{"id": vendor.id,
                  "name": vendor.vendor_name,
                  "price": vendor.phone_number,
-                 "email": vendor.email,
-                 "password": vendor.password} for vendor in vendors]
+                 "email": vendor.email} for vendor in vendors]
         return JsonResponse({"vendor": data}, safe=False)
-
 
 
 @csrf_exempt
 def edit_vendor(request, vendor_id):
-    if request.method == 'PUT':
+    if request.method == 'GET':
+        try:
+            # Retrieve the vendor
+            vendor = get_object_or_404(Vendor, id=vendor_id)
+
+            # Return vendor data as JSON
+            vendor_data = {
+                "vendor_name": vendor.vendor_name,
+                "email": vendor.email,
+                "phone_number": vendor.phone_number,
+                "whatsapp_number": vendor.whatsapp_number,
+                "location": vendor.location
+            }
+            return JsonResponse(vendor_data, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    elif request.method == 'PUT':
         try:
             # Retrieve the vendor to be edited
             vendor = get_object_or_404(Vendor, id=vendor_id)
@@ -959,13 +993,14 @@ def edit_vendor(request, vendor_id):
             data = json.loads(request.body)
 
             # Update fields if provided
-            vendor.vendor_name = data.get('vendor_name', vendor.vendor_name)  # Update name
-            vendor.email = data.get('email', vendor.email)  # Update email
-            vendor.password = data.get('password', vendor.password)  # Update password
-            vendor.phone_number = data.get('phone_number', vendor.phone_number)  # Update phone number
+            vendor.vendor_name = data.get('vendor_name', vendor.vendor_name)  # Vendor can edit name
+            vendor.email = data.get('email', vendor.email)  # Vendor can edit email
+            vendor.password = data.get('password', vendor.password)  # Vendor can change password
+            vendor.phone_number = data.get('phone_number', vendor.phone_number)  # Vendor can edit phone number
 
-            # Log the updated values
-            # print("Updated Vendor Data:", vendor.vendor_name, vendor.email, vendor.phone_number, vendor.password)
+            # Vendor-specific fields that only vendors can update
+            vendor.whatsapp_number = data.get('whatsapp_number', vendor.whatsapp_number)
+            vendor.location = data.get('location', vendor.location)
 
             # Save the updated vendor
             vendor.save()
@@ -976,7 +1011,6 @@ def edit_vendor(request, vendor_id):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
-
 
 
 @csrf_exempt
@@ -1367,3 +1401,140 @@ def remove_promoted_brand(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request method"}, status=400)
+
+# DATE ISSUE WAS NOT THERE FOR START DATE
+# @csrf_exempt
+# def add_subscriber(request):
+#     try:
+#         data = json.loads(request.body)
+#
+#         email = data.get('email')
+#         service_type = data.get('service_type')
+#         plan = data.get('plan')
+#         duration = data.get('duration')
+#         start_date = data.get('start_date')
+#         status = data.get('status')
+#
+#         # Validate email
+#         if not User.objects.filter(email=email).exists():
+#             return JsonResponse({'error': 'No such user registered.'}, status=400)
+#
+#         # Save subscriber
+#         subscriber = Subscriber(
+#             email=email,
+#             service_type=service_type,
+#             plan=plan,
+#             duration=duration,
+#             start_date=parse_date(start_date),
+#             status=status
+#         )
+#         subscriber.save()
+#
+#         return JsonResponse({'message': 'Subscriber added successfully.'}, status=201)
+#
+#     except json.JSONDecodeError:
+#         return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+#     except Exception as e:
+#         return JsonResponse({'error': str(e)}, status=500)
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.hashers import make_password, check_password
+from .models import Vendor
+import json
+
+@csrf_exempt
+def update_vendor(request, vendor_id):
+    try:
+        vendor = Vendor.objects.get(id=vendor_id)
+
+        if request.method == 'POST':
+            data = json.loads(request.body)
+
+            # Update email
+            email = data.get('email')
+            if email:
+                vendor.email = email
+
+            # Update password
+            password = data.get('password')
+            if password:
+                vendor.password = make_password(password)  # Hash the password before saving
+
+            # Update location
+            location = data.get('location')
+            if location:
+                vendor.location = location
+
+            vendor.save()
+
+            return JsonResponse({'message': 'Vendor details updated successfully.'}, status=200)
+
+        return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+    except Vendor.DoesNotExist:
+        return JsonResponse({'error': 'Vendor not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.dateparse import parse_date
+import json
+from datetime import datetime
+from .models import Subscriber
+from django.contrib.auth.models import User
+
+
+@csrf_exempt
+def add_subscriber(request):
+    try:
+        data = json.loads(request.body)
+
+        email = data.get('email')
+        postal_code = data.get('postal_code')
+        service_type = data.get('service_type')
+        plan = data.get('plan')
+        duration = data.get('duration')
+        assigned_vendor = data.get('assigned_vendor')
+        start_date = data.get('start_date')
+
+        # Validate email
+        if not User.objects.filter(email=email).exists():
+            return JsonResponse({'error': 'No such user registered.'}, status=400)
+
+        # Validate and parse start_date
+        if start_date:
+            try:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            except ValueError:
+                return JsonResponse({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
+        else:
+            return JsonResponse({'error': 'Start date is required.'}, status=400)
+
+        # Validate duration
+        try:
+            duration = int(duration)
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'Duration must be an integer.'}, status=400)
+
+        # Save subscriber
+        subscriber = Subscriber(
+            email=email,
+            postal_code=postal_code,
+            service_type=service_type,
+            plan=plan,
+            duration=duration,
+            assigned_vendor=assigned_vendor,
+            start_date=start_date,
+        )
+        subscriber.save()
+
+        return JsonResponse({'message': 'Subscriber added successfully.', 'end_date': subscriber.end_date}, status=201)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+
