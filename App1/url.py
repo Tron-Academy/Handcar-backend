@@ -50,7 +50,10 @@ urlpatterns = [
     path('view_promoted_brands', views.view_promoted_brands, name='view_promoted_brands'),
     path('remove_promoted_brand', views.remove_promoted_brand, name='remove_promoted_brand'),
     path('add_subscriber', views.add_subscriber, name='add_subscriber'),
-    path('edit_vendor/<int:vendor_id>/', views.edit_vendor, name='edit_vendor')
+    path('view_subscribers', views.view_subscribers, name='view_subscribers'),
+    path('edit_vendor/<int:vendor_id>/', views.edit_vendor, name='edit_vendor'),
+    path('view_users', views.view_users, name='view_users'),
+    path('view_subscribers_vendor', views.view_subscribers_vendor, name='view_subscribers_vendor')
 ]
 
 

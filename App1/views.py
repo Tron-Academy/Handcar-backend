@@ -22,7 +22,7 @@ import random
 from django.core.cache import cache
 from rest_framework import serializers, status
 from django.contrib.auth.models import User
-from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand,Vendor, Coupon, Plan, Subscriber
+from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand,Vendor, Coupon, Plan, Subscriber, Subscription
 from .serializers import AddressSerializer
 
 
@@ -1535,6 +1535,75 @@ def add_subscriber(request):
         return JsonResponse({'error': 'Invalid JSON.'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+def view_subscribers(request):
+    if request.method == 'GET':
+        search_query = request.GET.get('search', '')
+        if search_query:
+            subscriber = Subscriber.objects.filter(name__icontains=search_query)
+        else:
+            subscriber = Subscriber.objects.all()
+        data = [{  "id": subscribers.id,
+                    "email": subscribers.email,
+                    "postal_code": subscribers.postal_code,
+                    "service_type": subscribers.service_type,
+                    "plan": subscribers.plan,
+                    "duration": subscribers.duration,
+                    "start_date": subscribers.start_date,
+                    "end_date": subscribers.end_date,
+                    "assigned_vendor": subscribers.assigned_vendor} for subscribers in subscriber]
+        return JsonResponse({"user": data}, safe=False)
+
+
+def view_subscribers_vendor(request):
+    if request.method == 'GET':
+        # Fetch the logged-in user
+        current_vendor = request.user
+
+        # Ensure the user is a vendor
+        if not hasattr(current_vendor, 'vendor_profile'):  # Assuming there's a Vendor profile related to the user
+            return JsonResponse({"error": "Access denied"}, status=403)
+
+        # Filter subscribers assigned to this vendor
+        search_query = request.GET.get('search', '')
+        if search_query:
+            subscriber = Subscriber.objects.filter(
+                assigned_vendor=current_vendor,
+                name__icontains=search_query
+            )
+        else:
+            subscriber = Subscriber.objects.filter(assigned_vendor=current_vendor)
+
+        # Prepare data for response
+        data = [
+            {
+                "id": subscribers.id,
+                "email": subscribers.email,
+                "postal_code": subscribers.postal_code,
+                "service_type": subscribers.service_type,
+                "plan": subscribers.plan,
+                "duration": subscribers.duration,
+                "start_date": subscribers.start_date,
+                "end_date": subscribers.end_date,
+                "assigned_vendor": subscribers.assigned_vendor.id if subscribers.assigned_vendor else None,
+            } for subscribers in subscriber
+        ]
+        return JsonResponse({"subscribers": data}, safe=False)
+
+
+def view_users(request):
+    if request.method == 'GET':
+        search_query = request.GET.get('search', '')
+        if search_query:
+            user = User.objects.filter(name__icontains=search_query)
+        else:
+            user = User.objects.filter(is_superuser=False)
+        data = [{  "id": users.id,
+                    "username": users.username,
+                    "first_name": users.first_name,
+                    "last_name": users.last_name,
+                    "email": users.email} for users in user]
+        return JsonResponse({"user": data}, safe=False)
 
 
 
