@@ -38,7 +38,7 @@ SECRET_KEY = 'django-insecure-g*6$8q350_^v7k=e-%ky4$&nn48ds8=&mvpqi5&)j=d_n5b(b!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [ '192.168.1.47']
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -52,8 +52,29 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'App1',
     'rest_framework',
-    'corsheaders'
+    'corsheaders',
+    'rest_framework_simplejwt.token_blacklist'
 ]
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),  # Adjust as needed
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),     # Adjust as needed
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_COOKIE': 'access_token',                  # Name of the access token cookie
+    'AUTH_COOKIE_REFRESH': 'refresh_token',         # Name of the refresh token cookie
+    'AUTH_COOKIE_SECURE': False,                    # Set to True in production
+    'AUTH_COOKIE_HTTP_ONLY': True,
+    'AUTH_COOKIE_PATH': '/',                        # Set cookie path
+    'AUTH_COOKIE_SAMESITE': 'Lax',                  # Adjust based on your needs
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

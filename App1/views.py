@@ -1,29 +1,16 @@
-import json
 from random import random
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.hashers import make_password
-from django.core.validators import validate_email
 from django.db import IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
-from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
-from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.models import User
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
-from requests import Response
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
 from twilio.rest import Client
 import random
 from django.core.cache import cache
-from rest_framework import serializers, status
-from django.contrib.auth.models import User
-from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand,Vendor, Coupon, Plan, Subscriber, Subscription
-from .serializers import AddressSerializer
+from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand,Vendor, Coupon, Plan, Subscriber, Subscription,Services
 
 
 @csrf_exempt
@@ -163,17 +150,6 @@ def login_with_otp(request):
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-# def view_products(request):
-#     if request.method == 'GET':
-#         search_query = request.GET.get('search', '')
-#         if search_query:
-#             product = Product.objects.filter(name__icontains=search_query)
-#         else:
-#             product = Product.objects.all()
-#             data = [{"id": cat.id, "name": cat.name, "category": cat.category, "brand":cat.brand, "price": cat.price, "image": cat.image, "description": cat.description, "is_bestseller":cat.is_bestseller} for cat in product]
-#         return JsonResponse({"product": data}, safe=False)
-
-
 def view_products(request):
     if request.method == 'GET':
         search_query = request.GET.get('search', '')
@@ -215,12 +191,6 @@ def add_to_cart(request, product_id):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
-# @csrf_exempt
-# @login_required
-# def add_to_wishlist(request, product_id):
-#     if request.method == 'POST':
-#         product = get_object_or_404(Product, id=product_id)
-#         wishlist_item, created = WishlistItem.objects.get_or_create(user=request.user, product=product)
 
 @csrf_exempt
 def add_to_wishlist(request, product_id):
@@ -521,6 +491,7 @@ def edit_category(request, category_id):
             "id": category.id,
             "name": category.name,
         })
+
 
     elif request.method == 'POST':
         # Get the updated name from the request body
@@ -860,6 +831,7 @@ def edit_product(request, product_id):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
 
 
 @csrf_exempt
@@ -1555,47 +1527,14 @@ def view_subscribers(request):
         return JsonResponse({"user": data}, safe=False)
 
 
-def view_subscribers_vendor(request):
-    if request.method == 'GET':
-        # Fetch the logged-in user
-        current_vendor = request.user
 
-        # Ensure the user is a vendor
-        if not hasattr(current_vendor, 'vendor_profile'):  # Assuming there's a Vendor profile related to the user
-            return JsonResponse({"error": "Access denied"}, status=403)
-
-        # Filter subscribers assigned to this vendor
-        search_query = request.GET.get('search', '')
-        if search_query:
-            subscriber = Subscriber.objects.filter(
-                assigned_vendor=current_vendor,
-                name__icontains=search_query
-            )
-        else:
-            subscriber = Subscriber.objects.filter(assigned_vendor=current_vendor)
-
-        # Prepare data for response
-        data = [
-            {
-                "id": subscribers.id,
-                "email": subscribers.email,
-                "postal_code": subscribers.postal_code,
-                "service_type": subscribers.service_type,
-                "plan": subscribers.plan,
-                "duration": subscribers.duration,
-                "start_date": subscribers.start_date,
-                "end_date": subscribers.end_date,
-                "assigned_vendor": subscribers.assigned_vendor.id if subscribers.assigned_vendor else None,
-            } for subscribers in subscriber
-        ]
-        return JsonResponse({"subscribers": data}, safe=False)
 
 
 def view_users(request):
     if request.method == 'GET':
         search_query = request.GET.get('search', '')
         if search_query:
-            user = User.objects.filter(name__icontains=search_query)
+            user = User.objects.filter(username__icontains=search_query)
         else:
             user = User.objects.filter(is_superuser=False)
         data = [{  "id": users.id,
@@ -1607,3 +1546,67 @@ def view_users(request):
 
 
 
+import cloudinary.uploader
+from django.http import JsonResponse
+import json
+@csrf_exempt
+def add_service(request):
+    if request.method == 'POST':
+        try:
+            # Get the form data
+            service_name = request.POST.get('Service_name')
+            service_category = request.POST.get('Service_category')
+            service_details = request.POST.get('Service_details')
+            rate = request.POST.get('Rate')
+            image = request.FILES.get('Image')  # The image file sent from the frontend
+
+            # Validate required fields
+            if not all([service_name, service_category, service_details, rate, image]):
+                return JsonResponse({"error": "All fields are required."}, status=400)
+
+            # Upload image to Cloudinary
+            try:
+                upload_result = cloudinary.uploader.upload(image)  # Upload the image file
+                image_url = upload_result.get('secure_url')  # Get the URL of the uploaded image
+            except Exception as e:
+                return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
+
+            # Save the service to the database
+            service = Services.objects.create(
+                Service_name=service_name,
+                Service_category=service_category,
+                Service_details=service_details,
+                Rate=rate,
+                Image=image_url  # Save the Cloudinary image URL
+            )
+
+            return JsonResponse({
+                "message": "Service added successfully.",
+                "service_id": service.id,
+                "image_url": image_url
+            }, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data."}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+
+
+def view_services(request):
+    if request.method == 'GET':
+        services = Services.objects.all()
+        service_list = [
+            {
+                'service_name' : data.Service_name,
+                'service_category': data.Service_category,
+                'service_details': data.Service_category,
+                'rate': data.Rate,
+                'image': data.Image
+            }
+            for data in services
+        ]
+        return JsonResponse({'Service List:': service_list})
+    return JsonResponse({'Error': 'Invalid request method'})

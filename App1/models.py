@@ -157,18 +157,48 @@ class Address(models.Model):
     def __str__(self):
         return f"{self.street}, {self.city}, {self.state}, {self.zip_code}, {self.country}"
 
+#
+# class Vendor(models.Model):
+#     vendor_name = models.CharField(max_length=255)
+#     phone_number = models.CharField(max_length=15, unique=True)  # Assuming a phone number format
+#     email = models.EmailField(unique=True)
+#     password = models.CharField(max_length=255)  # Should be hashed in production
+#     location = models.TextField(blank=True, null=True)  # Allow location to be added later
+#     whatsapp_number = models.CharField(max_length=15, blank=True, null=True)  # Optional, can be added later
+#     updated_at = models.DateTimeField(auto_now=True)  # Track when the vendor was last updated
+#
+#     def __str__(self):
+#         return self.vendor_name
+
+from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password
+from django.core.validators import RegexValidator
+from django.db import models
 
 class Vendor(models.Model):
     vendor_name = models.CharField(max_length=255)
-    phone_number = models.CharField(max_length=15, unique=True)  # Assuming a phone number format
+    phone_number = models.CharField(
+        max_length=15,
+        unique=True,
+        validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Enter a valid phone number.")]
+    )
     email = models.EmailField(unique=True)
-    password = models.CharField(max_length=255)  # Should be hashed in production
-    location = models.TextField(blank=True, null=True)  # Allow location to be added later
-    whatsapp_number = models.CharField(max_length=15, blank=True, null=True)  # Optional, can be added later
-    updated_at = models.DateTimeField(auto_now=True)  # Track when the vendor was last updated
+    password = models.CharField(max_length=255)
+    location = models.TextField(blank=True, null=True)
+    whatsapp_number = models.CharField(max_length=15, blank=True, null=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='vendors')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        # Hash the password if it is not already hashed
+        if not self.password.startswith('pbkdf2_'):
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.vendor_name
+
 
 
 class Coupon(models.Model):
@@ -216,3 +246,11 @@ class Subscriber(models.Model):
 
     def __str__(self):
         return self.email
+
+
+class Services(models.Model):
+    Service_name = models.CharField(max_length=2000)
+    Service_category = models.CharField(max_length=2000)
+    Service_details = models.TextField()
+    Rate = models.IntegerField()
+    Image = models.URLField(max_length=2000, blank=True, null=True)

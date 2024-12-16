@@ -52,8 +52,9 @@ urlpatterns = [
     path('add_subscriber', views.add_subscriber, name='add_subscriber'),
     path('view_subscribers', views.view_subscribers, name='view_subscribers'),
     path('edit_vendor/<int:vendor_id>/', views.edit_vendor, name='edit_vendor'),
-    path('view_users', views.view_users, name='view_users'),
-    path('view_subscribers_vendor', views.view_subscribers_vendor, name='view_subscribers_vendor')
+    path('view_users/', views.view_users, name='view_users'),
+    path('add_service', views.add_service, name='add_service'),
+    path('view_services', views.view_services, name='view_services')
 ]
 
 
