@@ -191,11 +191,6 @@ class Vendor(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
 
-    def save(self, *args, **kwargs):
-        # Hash the password if it is not already hashed
-        if not self.password.startswith('pbkdf2_'):
-            self.password = make_password(self.password)
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.vendor_name

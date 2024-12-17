@@ -57,6 +57,7 @@ urlpatterns = [
     path('view_services', views.view_services, name='view_services'),
     path('admin_login', views.admin_login, name='admin_login'),
     path('UserLogin', views.UserLogin, name='UserLogin'),
+    path('VendorLogin', views.VendorLogin, name='VendorLogin')
 
 
 ]

@@ -1711,3 +1711,40 @@ def UserLogin(request):
 
 
 
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.models import User
+from django.http import JsonResponse
+from .models import Vendor
+
+@csrf_exempt
+def VendorLogin(request):
+    if request.method == 'POST':
+        phone_number = request.POST.get('phone_number')
+        password = request.POST.get('password')
+
+        # Debugging: print the phone number and password to check what's being received
+        print("Received phone number:", phone_number)
+        print("Received password:", password)
+
+        try:
+            vendor = Vendor.objects.get(phone_number=phone_number)
+            # Debugging: print the vendor object to see if it's being retrieved
+            print("Vendor found:", vendor)
+
+            # Directly compare the entered password with the stored password
+            if password == vendor.password:
+                # You need to create a custom token for the vendor
+                refresh = RefreshToken()
+                refresh['vendor_id'] = vendor.id  # Store vendor-specific info in the token
+
+                return JsonResponse({
+                    "message": "Vendor login successful",
+                    "access_token": str(refresh.access_token),
+                    "refresh_token": str(refresh)
+                })
+            else:
+                return JsonResponse({"error": "Invalid password"}, status=401)
+        except Vendor.DoesNotExist:
+            return JsonResponse({"error": "Vendor not found"}, status=404)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
