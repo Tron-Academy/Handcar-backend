@@ -54,7 +54,11 @@ urlpatterns = [
     path('edit_vendor/<int:vendor_id>/', views.edit_vendor, name='edit_vendor'),
     path('view_users/', views.view_users, name='view_users'),
     path('add_service', views.add_service, name='add_service'),
-    path('view_services', views.view_services, name='view_services')
+    path('view_services', views.view_services, name='view_services'),
+    path('admin_login', views.admin_login, name='admin_login'),
+    path('UserLogin', views.UserLogin, name='UserLogin'),
+
+
 ]
 
 

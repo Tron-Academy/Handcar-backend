@@ -1610,3 +1610,104 @@ def view_services(request):
         ]
         return JsonResponse({'Service List:': service_list})
     return JsonResponse({'Error': 'Invalid request method'})
+
+
+from django.contrib.auth import authenticate
+
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+# @csrf_exempt
+# def admin_login(request):
+#     if request.method == 'POST':
+#         username = request.data.get('username')
+#         password = request.data.get('password')
+#
+#         user = authenticate(username=username, password=password)
+#
+#         if user and user.is_superuser:
+#             # Generate JWT tokens
+#             refresh = RefreshToken.for_user(user)
+#             return Response({
+#                 "message": "Admin login successful",
+#                 "access_token": str(refresh.access_token),
+#                 "refresh_token": str(refresh)
+#             })
+#
+#         return Response({"error": "Invalid admin credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+
+@csrf_exempt
+def admin_login(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        print(f"Username: {username}, Password: {password}")  # Debug input
+
+        user = authenticate(username=username, password=password)
+
+        if user:
+            print(f"User authenticated: {user.username}, Is superuser: {user.is_superuser}")  # Debug authentication
+        else:
+            print("Authentication failed")
+
+        if user and user.is_superuser:
+            refresh = RefreshToken.for_user(user)
+            return JsonResponse({
+                "message": "Admin login successful",
+                "access_token": str(refresh.access_token),
+                "refresh_token": str(refresh)
+            })
+
+        return JsonResponse({"error": "Invalid admin credentials"}, status=401)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+# @csrf_exempt
+# def UserLogin(request):
+#     if request.method == 'POST':
+#         username = request.POST.get('username')
+#         password = request.POST.get('password')
+#
+#         user = authenticate(username=username, password=password)
+#
+#         if user and not user.is_superuser:
+#             # Generate JWT tokens
+#             refresh = RefreshToken.for_user(user)
+#             return Response({
+#                 "message": "User login successful",
+#                 "access_token": str(refresh.access_token),
+#                 "refresh_token": str(refresh)
+#             })
+#
+#         return Response({"error": "Invalid user credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+
+@csrf_exempt
+def UserLogin(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(username=username, password=password)
+
+        if user and not user.is_superuser:
+            # Generate JWT tokens
+            refresh = RefreshToken.for_user(user)
+            return JsonResponse({
+                "message": "User login successful",
+                "access_token": str(refresh.access_token),
+                "refresh_token": str(refresh)
+            })
+
+        return JsonResponse({"error": "Invalid user credentials"}, status=401)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+

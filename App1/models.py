@@ -5,6 +5,7 @@ from email.policy import default
 from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.utils.timezone import now
 
 from rest_framework import serializers
 from django.utils import timezone
@@ -186,9 +187,9 @@ class Vendor(models.Model):
     password = models.CharField(max_length=255)
     location = models.TextField(blank=True, null=True)
     whatsapp_number = models.CharField(max_length=15, blank=True, null=True)
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='vendors')
-    created_at = models.DateTimeField(auto_now_add=True)
+    models.DateTimeField(default=now)
     updated_at = models.DateTimeField(auto_now=True)
+
 
     def save(self, *args, **kwargs):
         # Hash the password if it is not already hashed
