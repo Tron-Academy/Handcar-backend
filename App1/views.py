@@ -580,6 +580,7 @@ def delete_category(request, category_id):
     else:
         return JsonResponse({"error": "Invalid HTTP method"}, status=405)
 
+
 @csrf_exempt
 def add_brand(request):
     if request.method == 'POST':
@@ -679,151 +680,75 @@ def delete_brand(request, brand_id):
 
 
 from cloudinary.uploader import upload
-# @csrf_exempt
-# def add_product(request):
-#     if request.method == 'POST':
-#         try:
-#             # Check if the request contains files and form-data
-#             if request.FILES.get('image'):  # Check for image file
-#                 image_file = request.FILES['image']
-#             else:
-#                 image_file = None  # In case no image is uploaded
-#
-#             # Get other data from the form (using request.POST)
-#             name = request.POST.get('name')
-#             category_id = request.POST.get('category_id')
-#             brand_id = request.POST.get('brand_id')
-#             price = request.POST.get('price')
-#             description = request.POST.get('description', '')
-#             is_bestseller = request.POST.get('is_bestseller', False)
-#             discount_percentage = request.POST.get('discount_percentage', 0)
-#
-#             # Validate required fields
-#             if not name or not category_id or not brand_id or not price:
-#                 return JsonResponse({"error": "Name, category_id, brand_id, and price are required."}, status=400)
-#
-#             # Retrieve related objects
-#             category = get_object_or_404(Category, id=category_id)
-#             brand = get_object_or_404(Brand, id=brand_id)
-#
-#             # Handle image upload to Cloudinary
-#             image_url = None
-#             if image_file:
-#                 try:
-#                     upload_result = upload(image_file, folder="product_images/")
-#                     image_url = upload_result['secure_url']
-#                 except Exception as e:
-#                     return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
-#
-#             # Create the Product instance
-#             product = Product.objects.create(
-#                 name=name,
-#                 category=category,
-#                 brand=brand,
-#                 price=price,
-#                 description=description,
-#                 is_bestseller=is_bestseller,
-#                 discount_percentage=discount_percentage,
-#                 image=image_url  # Save the Cloudinary image URL
-#             )
-#
-#             return JsonResponse({
-#                 "message": "Product added successfully.",
-#                 "product": {
-#                     "id": product.id,
-#                     "name": product.name,
-#                     "category": product.category.name,
-#                     "brand": product.brand.name,
-#                     "price": str(product.price),
-#                     "description": product.description,
-#                     "is_bestseller": product.is_bestseller,
-#                     "discount_percentage": product.discount_percentage,
-#                     "image": product.image,  # Return Cloudinary image URL
-#                     "created_at": product.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-#                 }
-#             }, status=201)
-#
-#         except Exception as e:
-#             return JsonResponse({"error": str(e)}, status=500)
-#
-#     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
-#
+@csrf_exempt
+def add_product(request):
+    if request.method == 'POST':
+        try:
+            # Check if the request contains files and form-data
+            if request.FILES.get('image'):  # Check for image file
+                image_file = request.FILES['image']
+            else:
+                image_file = None  # In case no image is uploaded
 
-# from django.shortcuts import get_object_or_404
-# from django.http import JsonResponse
-# from cloudinary.uploader import upload
-# from .models import Product, Category, Brand
-# from django.views.decorators.csrf import csrf_exempt
-# import json
-#
-# @csrf_exempt
-# def add_product(request):
-#     if request.method == 'POST':
-#         try:
-#             # Check if the request contains files and form-data
-#             if request.FILES.get('image'):  # Check for image file
-#                 image_file = request.FILES['image']
-#             else:
-#                 image_file = None  # In case no image is uploaded
-#
-#             # Get other data from the form (using request.POST)
-#             name = request.POST.get('name')
-#             category_name = request.POST.get('category_name')  # Use name instead of ID
-#             brand_name = request.POST.get('brand_name')        # Use name instead of ID
-#             price = request.POST.get('price')
-#             description = request.POST.get('description', '')
-#             is_bestseller = request.POST.get('is_bestseller', False)
-#             discount_percentage = request.POST.get('discount_percentage', 0)
-#
-#             # Validate required fields
-#             if not name or not category_name or not brand_name or not price:
-#                 return JsonResponse({"error": "Name, category_name, brand_name, and price are required."}, status=400)
-#
-#             # Retrieve related objects by name
-#             category = get_object_or_404(Category, name=category_name)
-#             brand = get_object_or_404(Brand, name=brand_name)
-#
-#             # Handle image upload to Cloudinary
-#             image_url = None
-#             if image_file:
-#                 try:
-#                     upload_result = upload(image_file, folder="product_images/")
-#                     image_url = upload_result['secure_url']
-#                 except Exception as e:
-#                     return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
-#
-#             # Create the Product instance
-#             product = Product.objects.create(
-#                 name=name,
-#                 category=category,
-#                 brand=brand,
-#                 price=price,
-#                 description=description,
-#                 is_bestseller=is_bestseller,
-#                 discount_percentage=discount_percentage,
-#                 image=image_url  # Save the Cloudinary image URL
-#             )
-#
-#             return JsonResponse({
-#                 "message": "Product added successfully.",
-#                 "product": {
-#                     "id": product.id,
-#                     "name": product.name,
-#                     "category": product.category.name,
-#                     "brand": product.brand.name,
-#                     "price": str(product.price),
-#                     "description": product.description,
-#                     "is_bestseller": product.is_bestseller,
-#                     "discount_percentage": product.discount_percentage,
-#                     "image": product.image,  # Return Cloudinary image URL
-#                     "created_at": product.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-#                 }
-#             }, status=201)
-#
-#         except Exception as e:
-#             return JsonResponse({"error": str(e)}, status=500)
-#
-#     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+            # Get other data from the form (using request.POST)
+            name = request.POST.get('name')
+            category_name = request.POST.get('category_name')  # Use name instead of ID
+            brand_name = request.POST.get('brand_name')        # Use name instead of ID
+            price = request.POST.get('price')
+            description = request.POST.get('description', '')
+            is_bestseller = request.POST.get('is_bestseller', False)
+            discount_percentage = request.POST.get('discount_percentage', 0)
+
+            # Validate required fields
+            if not name or not category_name or not brand_name or not price:
+                return JsonResponse({"error": "Name, category_name, brand_name, and price are required."}, status=400)
+
+            # Retrieve related objects by name
+            category = get_object_or_404(Category, name=category_name)
+            brand = get_object_or_404(Brand, name=brand_name)
+
+            # Handle image upload to Cloudinary
+            image_url = None
+            if image_file:
+                try:
+                    upload_result = upload(image_file, folder="product_images/")
+                    image_url = upload_result['secure_url']
+                except Exception as e:
+                    return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
+
+            # Create the Product instance
+            product = Product.objects.create(
+                name=name,
+                category=category,
+                brand=brand,
+                price=price,
+                description=description,
+                is_bestseller=is_bestseller,
+                discount_percentage=discount_percentage,
+                image=image_url  # Save the Cloudinary image URL
+            )
+
+            return JsonResponse({
+                "message": "Product added successfully.",
+                "product": {
+                    "id": product.id,
+                    "name": product.name,
+                    "category": product.category.name,
+                    "brand": product.brand.name,
+                    "price": str(product.price),
+                    "description": product.description,
+                    "is_bestseller": product.is_bestseller,
+                    "discount_percentage": product.discount_percentage,
+                    "image": product.image,  # Return Cloudinary image URL
+                    "created_at": product.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                }
+            }, status=201)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
 
 @csrf_exempt
 def view_products(request):
@@ -983,7 +908,7 @@ def view_vendors(request):
 
 
 @csrf_exempt
-def edit_vendor(request, vendor_id):
+def edit_vendor_profile(request, vendor_id):
     if request.method == 'GET':
         try:
             # Retrieve the vendor
@@ -1002,7 +927,7 @@ def edit_vendor(request, vendor_id):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
-    elif request.method == 'PUT':
+    elif request.method == 'POST':
         try:
             # Retrieve the vendor to be edited
             vendor = get_object_or_404(Vendor, id=vendor_id)
@@ -1503,6 +1428,7 @@ from .models import Subscriber
 from django.contrib.auth.models import User
 
 
+
 @csrf_exempt
 def add_subscriber(request):
     try:
@@ -1702,7 +1628,7 @@ def add_service(request):
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
 
 
-
+@csrf_exempt
 def view_services(request):
     if request.method == 'GET':
         services = Services.objects.all()
@@ -1719,6 +1645,122 @@ def view_services(request):
         return JsonResponse({'Service List:': service_list})
     return JsonResponse({'Error': 'Invalid request method'})
 
+# @csrf_exempt
+# def edit_service(request, service_id):
+#     if request.method == 'PUT':
+#         try:
+#             # Parse the JSON body
+#             import json
+#             data = json.loads(request.body)
+#
+#             # Retrieve the service by ID
+#             service = Services.objects.get(id=service_id)
+#
+#             # Update the service fields if provided
+#             service.Service_name = data.get('Service_name', service.Service_name)
+#             service.Service_category = data.get('Service_category', service.Service_category)
+#             service.Service_details = data.get('Service_details', service.Service_details)
+#             service.Rate = data.get('Rate', service.Rate)
+#
+#             # Update the image if provided
+#             if 'Image' in request.FILES:
+#                 image = request.FILES['Image']
+#                 # Upload new image to Cloudinary
+#                 try:
+#                     upload_result = cloudinary.uploader.upload(image)
+#                     service.Image = upload_result.get('secure_url')
+#                 except Exception as e:
+#                     print(f"Cloudinary upload error: {e}")
+#                     return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
+#
+#             # Save the updated service to the database
+#             service.save()
+#
+#             return JsonResponse({"message": "Service updated successfully."}, status=200)
+#
+#         except Services.DoesNotExist:
+#             return JsonResponse({"error": "Service not found."}, status=404)
+#         except Exception as e:
+#             print(f"Error: {e}")
+#             return JsonResponse({"error": str(e)}, status=500)
+#
+#     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+@csrf_exempt
+def edit_service(request, service_id):
+    # Handle GET request to fetch the existing service data
+    if request.method == 'GET':
+        try:
+            service = Services.objects.get(id=service_id)
+            service_data = {
+                'Service_name': service.Service_name,
+                'Service_category': service.Service_category,
+                'Service_details': service.Service_details,
+                'Rate': service.Rate,
+                'Image': service.Image,  # If you want to return the image URL
+            }
+            return JsonResponse(service_data, status=200)
+        except Services.DoesNotExist:
+            return JsonResponse({"error": "Service not found."}, status=404)
+
+    # Handle POST request to update the service data
+    elif request.method == 'POST':
+        try:
+            # Parse the JSON body
+            data = json.loads(request.body)
+
+            # Retrieve the service by ID
+            service = Services.objects.get(id=service_id)
+
+            # Update the service fields if provided
+            service.Service_name = data.get('Service_name', service.Service_name)
+            service.Service_category = data.get('Service_category', service.Service_category)
+            service.Service_details = data.get('Service_details', service.Service_details)
+            service.Rate = data.get('Rate', service.Rate)
+
+            # Update the image if provided
+            if 'Image' in request.FILES:
+                image = request.FILES['Image']
+                # Upload new image to Cloudinary
+                try:
+                    upload_result = cloudinary.uploader.upload(image)
+                    service.Image = upload_result.get('secure_url')
+                except Exception as e:
+                    print(f"Cloudinary upload error: {e}")
+                    return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
+
+            # Save the updated service to the database
+            service.save()
+
+            return JsonResponse({"message": "Service updated successfully."}, status=200)
+
+        except Services.DoesNotExist:
+            return JsonResponse({"error": "Service not found."}, status=404)
+        except Exception as e:
+            print(f"Error: {e}")
+            return JsonResponse({"error": str(e)}, status=500)
+
+    # If the method is not GET or POST
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+@csrf_exempt
+def delete_service(request, service_id):
+    if request.method == 'DELETE':
+        try:
+            # Retrieve the service by ID
+            service = Services.objects.get(id=service_id)
+
+            # Delete the service
+            service.delete()
+
+            return JsonResponse({"message": "Service deleted successfully."}, status=200)
+
+        except Services.DoesNotExist:
+            return JsonResponse({"error": "Service not found."}, status=404)
+        except Exception as e:
+            print(f"Error: {e}")
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
 
 from django.contrib.auth import authenticate
 
@@ -1744,7 +1786,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 #
 #         return Response({"error": "Invalid admin credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
-@csrf_exempt
+# @csrf_exempt
 # def admin_login(request):
 #     if request.method == 'POST':
 #         username = request.POST.get('username')
@@ -1859,36 +1901,119 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from .models import Vendor
 
+# @csrf_exempt
+# def VendorLogin(request):
+#     if request.method == 'POST':
+#         phone_number = request.POST.get('phone_number')
+#         password = request.POST.get('password')
+#
+#         # Debugging: print the phone number and password to check what's being received
+#         print("Received phone number:", phone_number)
+#         print("Received password:", password)
+#
+#         try:
+#             vendor = Vendor.objects.get(phone_number=phone_number)
+#             # Debugging: print the vendor object to see if it's being retrieved
+#             print("Vendor found:", vendor)
+#
+#             # Directly compare the entered password with the stored password
+#             if password == vendor.password:
+#                 # You need to create a custom token for the vendor
+#                 refresh = RefreshToken()
+#                 refresh['vendor_id'] = vendor.id  # Store vendor-specific info in the token
+
+#                 return JsonResponse({
+#                     "message": "Vendor login successful",
+#                     "access_token": str(refresh.access_token),
+#                     "refresh_token": str(refresh)
+#                 })
+#             else:
+#                 return JsonResponse({"error": "Invalid password"}, status=401)
+#         except Vendor.DoesNotExist:
+#             return JsonResponse({"error": "Vendor not found"}, status=404)
+#
+#     return JsonResponse({"error": "Invalid request method"}, status=405)
+
 @csrf_exempt
 def VendorLogin(request):
     if request.method == 'POST':
         phone_number = request.POST.get('phone_number')
         password = request.POST.get('password')
 
-        # Debugging: print the phone number and password to check what's being received
-        print("Received phone number:", phone_number)
-        print("Received password:", password)
-
         try:
+            # Retrieve vendor using phone number
             vendor = Vendor.objects.get(phone_number=phone_number)
-            # Debugging: print the vendor object to see if it's being retrieved
-            print("Vendor found:", vendor)
 
-            # Directly compare the entered password with the stored password
+            # Check the password against the hashed password
             if password == vendor.password:
                 # You need to create a custom token for the vendor
                 refresh = RefreshToken()
                 refresh['vendor_id'] = vendor.id  # Store vendor-specific info in the token
 
-                return JsonResponse({
+                # Generate JWT tokens
+
+                response = JsonResponse({
                     "message": "Vendor login successful",
                     "access_token": str(refresh.access_token),
                     "refresh_token": str(refresh)
                 })
-            else:
-                return JsonResponse({"error": "Invalid password"}, status=401)
+                # Set tokens in secure cookies
+                response.set_cookie(
+                    'access_token', str(refresh.access_token),
+                    max_age=timedelta(minutes=15), httponly=True, samesite='Lax'
+                )
+                response.set_cookie(
+                    'refresh_token', str(refresh),
+                    max_age=timedelta(days=1), httponly=True, samesite='Lax'
+                )
+                return response
+
+            return JsonResponse({"error": "Invalid credentials"}, status=401)
+
         except Vendor.DoesNotExist:
-            return JsonResponse({"error": "Vendor not found"}, status=404)
+            return JsonResponse({"error": "Invalid credentials"}, status=401)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+
+
+from rest_framework_simplejwt.tokens import OutstandingToken, BlacklistedToken
+
+@csrf_exempt
+def Logout(request):
+    if request.method == 'POST':
+        try:
+            refresh_token = request.COOKIES.get('refresh_token')
+            if refresh_token:
+                token = OutstandingToken(refresh_token)
+                BlacklistedToken.objects.create(token=token)  # Blacklist the token
+        except Exception as e:
+            pass  # Log the exception if needed
+
+        response = JsonResponse({"message": "Logout successful"})
+        response.delete_cookie('access_token', samesite='Lax')
+        response.delete_cookie('refresh_token', samesite='Lax')
+        return response
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def Logout(request):
+    if request.method == 'POST':
+        try:
+            refresh_token = request.COOKIES.get('refresh_token')
+            if refresh_token:
+                token = OutstandingToken(refresh_token)
+                BlacklistedToken.objects.create(token=token)  # Blacklist the token
+        except Exception as e:
+            pass  # Log the exception if needed
+
+        response = JsonResponse({"message": "Logout successful"})
+        response.delete_cookie('access_token', samesite='Lax')
+        response.delete_cookie('refresh_token', samesite='Lax')
+        return response
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
 
