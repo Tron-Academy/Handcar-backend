@@ -13,14 +13,58 @@ from django.core.cache import cache
 from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand,Vendor, Coupon, Plan, Subscriber, Subscription,Services
 
 
+# @csrf_exempt
+# def signup(request):
+#     if request.method == 'POST':
+#         # Get user details from the POST request
+#         name = request.POST.get('name')
+#         email = request.POST.get('email')
+#         phone = request.POST.get('phone')
+#         password = request.POST.get('password')
+#
+#         # Check if all fields are provided
+#         if not all([name, email, phone, password]):
+#             return JsonResponse({'error': 'All fields are required'}, status=400)
+#
+#         # Validate email format
+#         try:
+#             validate_email(email)
+#         except ValidationError:
+#             return JsonResponse({'error': 'Invalid email format'}, status=400)
+#
+#         # Check if the email already exists
+#         if User.objects.filter(email=email).exists():
+#             return JsonResponse({'error': 'Email is already taken'}, status=400)
+#
+#         # Check if the phone number is already registered
+#         if User.objects.filter(username=phone).exists():
+#             return JsonResponse({'error': 'Phone number is already registered'}, status=400)
+#
+#         # Create the user
+#         user = User.objects.create(
+#             username=phone,  # Using phone as the username
+#             first_name=name,
+#             email=email,
+#             password=make_password(password)  # Hash the password
+#         )
+#
+#         # Respond with success
+#         return JsonResponse({'message': 'Signup successful!'}, status=201)
+#
+#     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
 @csrf_exempt
 def signup(request):
     if request.method == 'POST':
-        # Get user details from the POST request
-        name = request.POST.get('name')
-        email = request.POST.get('email')
-        phone = request.POST.get('phone')
-        password = request.POST.get('password')
+        # Parse JSON data from the request body
+        try:
+            data = json.loads(request.body)
+            name = data.get('name')
+            email = data.get('email')
+            phone = data.get('phone')
+            password = data.get('password')
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON format'}, status=400)
 
         # Check if all fields are provided
         if not all([name, email, phone, password]):
@@ -41,14 +85,16 @@ def signup(request):
             return JsonResponse({'error': 'Phone number is already registered'}, status=400)
 
         # Create the user
-        user = User.objects.create(
-            username=phone,  # Using phone as the username
-            first_name=name,
-            email=email,
-            password=make_password(password)  # Hash the password
-        )
+        try:
+            user = User.objects.create_user(
+                username=phone,
+                first_name=name,
+                email=email,
+                password=password
+            )
+        except Exception as e:
+            return JsonResponse({'error': f'Failed to create user: {str(e)}'}, status=500)
 
-        # Respond with success
         return JsonResponse({'message': 'Signup successful!'}, status=201)
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
@@ -1550,6 +1596,55 @@ import cloudinary.uploader
 from django.http import JsonResponse
 import json
 @csrf_exempt
+# def add_service(request):
+#     if request.method == 'POST':
+#         print("POST Data:", request.POST)  # Log the POST data
+#         print("FILES Data:", request.FILES)  # Log the FILES data
+#         try:
+#             # Get the form data
+#             service_name = request.POST.get('Service_name')
+#             service_category = request.POST.get('Service_category')
+#             service_details = request.POST.get('Service_details')
+#             rate = request.POST.get('Rate')
+#             image = request.FILES.get('Image')  # The image file sent from the frontend
+#             print("Service_name:", service_name)
+#             print("Service_category:", service_category)
+#             print("Service_details:", service_details)
+#             print("Rate:", rate)
+#             print("Image:", image)
+#
+#             # Validate required fields
+#             if not all([service_name, service_category, service_details, rate, image]):
+#                 return JsonResponse({"error": "All fields are required."}, status=400)
+#
+#             # Upload image to Cloudinary
+#             try:
+#                 upload_result = cloudinary.uploader.upload(image)  # Upload the image file
+#                 image_url = upload_result.get('secure_url')  # Get the URL of the uploaded image
+#             except Exception as e:
+#                 return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
+#
+#             # Save the service to the database
+#             service = Services.objects.create(
+#                 Service_name=service_name,
+#                 Service_category=service_category,
+#                 Service_details=service_details,
+#                 Rate=rate,
+#                 Image=image_url  # Save the Cloudinary image URL
+#             )
+#
+#             return JsonResponse({
+#                 "message": "Service added successfully.",
+#                 "service_id": service.id,
+#                 "image_url": image_url
+#             }, status=201)
+#
+#         except json.JSONDecodeError:
+#             return JsonResponse({"error": "Invalid JSON data."}, status=400)
+#         except Exception as e:
+#             return JsonResponse({"error": str(e)}, status=500)
+#
+#     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
 def add_service(request):
     if request.method == 'POST':
         try:
@@ -1558,17 +1653,31 @@ def add_service(request):
             service_category = request.POST.get('Service_category')
             service_details = request.POST.get('Service_details')
             rate = request.POST.get('Rate')
-            image = request.FILES.get('Image')  # The image file sent from the frontend
+            image = request.FILES.get('Image')
+
+            # Debugging logs
+            print("Service_name:", service_name)
+            print("Service_category:", service_category)
+            print("Service_details:", service_details)
+            print("Rate:", rate)
+            print("Image:", image)
 
             # Validate required fields
             if not all([service_name, service_category, service_details, rate, image]):
                 return JsonResponse({"error": "All fields are required."}, status=400)
 
+            # Validate numeric fields
+            try:
+                rate = float(rate)
+            except ValueError:
+                return JsonResponse({"error": "Rate must be a numeric value."}, status=400)
+
             # Upload image to Cloudinary
             try:
-                upload_result = cloudinary.uploader.upload(image)  # Upload the image file
-                image_url = upload_result.get('secure_url')  # Get the URL of the uploaded image
+                upload_result = cloudinary.uploader.upload(image)
+                image_url = upload_result.get('secure_url')
             except Exception as e:
+                print(f"Cloudinary upload error: {e}")
                 return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
 
             # Save the service to the database
@@ -1586,9 +1695,8 @@ def add_service(request):
                 "image_url": image_url
             }, status=201)
 
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON data."}, status=400)
         except Exception as e:
+            print(f"Error: {e}")
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
@@ -1637,50 +1745,76 @@ from rest_framework_simplejwt.tokens import RefreshToken
 #         return Response({"error": "Invalid admin credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
 @csrf_exempt
+# def admin_login(request):
+#     if request.method == 'POST':
+#         username = request.POST.get('username')
+#         password = request.POST.get('password')
+#
+#         print(f"Username: {username}, Password: {password}")  # Debug input
+#
+#         user = authenticate(username=username, password=password)
+#
+#         if user:
+#             print(f"User authenticated: {user.username}, Is superuser: {user.is_superuser}")  # Debug authentication
+#         else:
+#             print("Authentication failed")
+#
+#         if user and user.is_superuser:
+#             refresh = RefreshToken.for_user(user)
+#             response= JsonResponse({
+#                 "message": "Admin login successful",
+#                 "access_token": str(refresh.access_token),
+#                 "refresh_token": str(refresh)
+#             })
+#             response.set_cookie(
+#                 'access_token', str(refresh.access_token),
+#                 max_age=timedelta(minutes=15), httponly=True, samesite='Lax'
+#             )
+#             response.set_cookie(
+#                 'refresh_token', str(refresh),
+#                 max_age=timedelta(days=1), httponly=True, samesite='Lax'
+#             )
+#             return response
+#
+#         return JsonResponse({"error": "Invalid admin credentials"}, status=401)
+#
+#     return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+@csrf_exempt
 def admin_login(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
 
-        print(f"Username: {username}, Password: {password}")  # Debug input
-
         user = authenticate(username=username, password=password)
-
-        if user:
-            print(f"User authenticated: {user.username}, Is superuser: {user.is_superuser}")  # Debug authentication
-        else:
-            print("Authentication failed")
-
         if user and user.is_superuser:
             refresh = RefreshToken.for_user(user)
-            return JsonResponse({
+            response = JsonResponse({
                 "message": "Admin login successful",
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
             })
+            # Set cookies
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+                value=str(refresh.access_token),
+                httponly=True,  # Prevent access via JavaScript
+                secure=False,  # Set True in production for HTTPS
+                samesite='Lax',  # Adjust as per requirement
+            )
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
+                value=str(refresh),
+                httponly=True,
+                secure=False,
+                samesite='Lax',
+            )
+            return response
 
         return JsonResponse({"error": "Invalid admin credentials"}, status=401)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
-
-# @csrf_exempt
-# def UserLogin(request):
-#     if request.method == 'POST':
-#         username = request.POST.get('username')
-#         password = request.POST.get('password')
-#
-#         user = authenticate(username=username, password=password)
-#
-#         if user and not user.is_superuser:
-#             # Generate JWT tokens
-#             refresh = RefreshToken.for_user(user)
-#             return Response({
-#                 "message": "User login successful",
-#                 "access_token": str(refresh.access_token),
-#                 "refresh_token": str(refresh)
-#             })
-#
-#         return Response({"error": "Invalid user credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 from django.http import JsonResponse
@@ -1699,11 +1833,20 @@ def UserLogin(request):
         if user and not user.is_superuser:
             # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
-            return JsonResponse({
+            response = JsonResponse({
                 "message": "User login successful",
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
             })
+            response.set_cookie(
+                'access_token', str(refresh.access_token),
+                max_age=timedelta(minutes=15), httponly=True, samesite='Lax'
+            )
+            response.set_cookie(
+                'refresh_token', str(refresh),
+                max_age=timedelta(days=1), httponly=True, samesite='Lax'
+            )
+            return response
 
         return JsonResponse({"error": "Invalid user credentials"}, status=401)
 
@@ -1748,3 +1891,4 @@ def VendorLogin(request):
             return JsonResponse({"error": "Vendor not found"}, status=404)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+

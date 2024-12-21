@@ -38,11 +38,12 @@ SECRET_KEY = 'django-insecure-g*6$8q350_^v7k=e-%ky4$&nn48ds8=&mvpqi5&)j=d_n5b(b!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.1.48']
+ALLOWED_HOSTS = ['192.168.1.57']
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
+CORS_ALLOW_CREDENTIALS = True
 
 # Application definition
 
@@ -58,11 +59,18 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist'
 ]
+# REST_FRAMEWORK = {
+#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         'rest_framework_simplejwt.authentication.JWTAuthentication',
+#     ),
+# }
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'App1.authentication.CustomJWTAuthentication',  # Check cookies first, then fallback
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # Only checks headers
     ),
 }
+
 
 from datetime import timedelta
 

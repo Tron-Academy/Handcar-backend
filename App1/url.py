@@ -3,7 +3,7 @@ from django.urls import path
 from . import views  # Make sure to import views from the correct app
 
 urlpatterns = [
-    path('signup/', views.signup, name='signup'),
+    path('signup', views.signup, name='signup'),
     path('generate/otp/', views.generate_otp, name='generate_otp'),
     path('login/password/', views.login_with_password, name='login_with_password'),
     path('login/send-otp/', views.send_otp, name='send_otp'),
