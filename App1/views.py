@@ -7,10 +7,12 @@ from django.contrib.auth import authenticate, login
 from django.views.decorators.csrf import csrf_exempt
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from geopy.exc import GeocoderTimedOut
 from twilio.rest import Client
 import random
 from django.core.cache import cache
 from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand,Vendor, Coupon, Plan, Subscriber, Subscription,Services
+from .utils import geocode_address
 
 
 # @csrf_exempt
@@ -154,24 +156,24 @@ def verify_otp(phone, entered_otp):
     return False
 
 # View for logging in with a password
-@csrf_exempt
-def login_with_password(request):
-    if request.method == 'POST':
-        phone = request.POST.get('phone')
-        password = request.POST.get('password')
-
-        # Assuming you are using phone as the username field
-        try:
-            user = User.objects.get(username=phone)
-            user = authenticate(request, username=phone, password=password)
-            if user is not None:
-                login(request, user)
-                return JsonResponse({'message': 'Login successful!'}, status=200)
-            else:
-                return JsonResponse({'error': 'Invalid password'}, status=400)
-        except User.DoesNotExist:
-            return JsonResponse({'error': 'User does not exist'}, status=404)
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+# @csrf_exempt
+# def login_with_password(request):
+#     if request.method == 'POST':
+#         phone = request.POST.get('phone')
+#         password = request.POST.get('password')
+#
+#         # Assuming you are using phone as the username field
+#         try:
+#             user = User.objects.get(username=phone)
+#             user = authenticate(request, username=phone, password=password)
+#             if user is not None:
+#                 login(request, user)
+#                 return JsonResponse({'message': 'Login successful!'}, status=200)
+#             else:
+#                 return JsonResponse({'error': 'Invalid password'}, status=400)
+#         except User.DoesNotExist:
+#             return JsonResponse({'error': 'User does not exist'}, status=404)
+#     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
 
@@ -252,6 +254,34 @@ def add_to_wishlist(request, product_id):
 
     # If not a POST request, return a 405 Method Not Allowed
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+@login_required
+@csrf_exempt
+def wishlist_items(request):
+    # Ensure it's a GET request
+    if request.method == 'GET':
+        # Get the wishlist items for the logged-in user
+        wishlist_items = WishlistItem.objects.filter(user=request.user)
+
+        # Prepare a list of wishlisted products
+        response_data = []
+        for item in wishlist_items:
+            product = item.product
+            response_data.append({
+                'id': item.id,
+                'product_name': product.name,
+                'product_price': product.price,
+                # 'product_image': product.image.url if product.image else None,
+                'product_image': product.image if product.image else None,
+
+                'product_description': product.description,
+                # Include other fields from the Product model as needed
+            })
+
+        return JsonResponse({'wishlist_items': response_data})
+
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
 @csrf_exempt
@@ -920,7 +950,9 @@ def edit_vendor_profile(request, vendor_id):
                 "email": vendor.email,
                 "phone_number": vendor.phone_number,
                 "whatsapp_number": vendor.whatsapp_number,
-                "location": vendor.location
+                "address": vendor.address,
+                "latitude": vendor.latitude,
+                "longitude": vendor.longitude
             }
             return JsonResponse(vendor_data, status=200)
 
@@ -943,9 +975,14 @@ def edit_vendor_profile(request, vendor_id):
 
             # Vendor-specific fields that only vendors can update
             vendor.whatsapp_number = data.get('whatsapp_number', vendor.whatsapp_number)
-            vendor.location = data.get('location', vendor.location)
+            # vendor.address = data.get('address', vendor.address)
+            new_address = data.get('address')
+            if new_address and new_address != vendor.address:
+                vendor.address = new_address
+                print(f"New address set: {new_address}")
+                vendor.latitude, vendor.longitude = geocode_address(new_address)
+                print(f"Geocoded latitude: {vendor.latitude}, longitude: {vendor.longitude}")
 
-            # Save the updated vendor
             vendor.save()
 
             return JsonResponse({"message": "Vendor updated successfully."}, status=200)
@@ -1428,19 +1465,71 @@ from .models import Subscriber
 from django.contrib.auth.models import User
 
 
+from .utils import haversine, geocode_address
 
 @csrf_exempt
+# def add_subscriber(request):
+#     try:
+#         data = json.loads(request.body)
+#
+#         email = data.get('email')
+#         postal_code = data.get('postal_code')
+#         service_type = data.get('service_type')
+#         plan = data.get('plan')
+#         duration = data.get('duration')
+#         assigned_vendor = data.get('assigned_vendor')
+#         start_date = data.get('start_date')
+#
+#         # Validate email
+#         if not User.objects.filter(email=email).exists():
+#             return JsonResponse({'error': 'No such user registered.'}, status=400)
+#
+#         # Validate and parse start_date
+#         if start_date:
+#             try:
+#                 start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+#             except ValueError:
+#                 return JsonResponse({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
+#         else:
+#             return JsonResponse({'error': 'Start date is required.'}, status=400)
+#
+#         # Validate duration
+#         try:
+#             duration = int(duration)
+#         except (ValueError, TypeError):
+#             return JsonResponse({'error': 'Duration must be an integer.'}, status=400)
+#
+#         # Save subscriber
+#         subscriber = Subscriber(
+#             email=email,
+#             postal_code=postal_code,
+#             service_type=service_type,
+#             plan=plan,
+#             duration=duration,
+#             assigned_vendor=assigned_vendor,
+#             start_date=start_date,
+#         )
+#         subscriber.save()
+#
+#         return JsonResponse({'message': 'Subscriber added successfully.', 'end_date': subscriber.end_date}, status=201)
+#
+#     except json.JSONDecodeError:
+#         return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+#     except Exception as e:
+#         return JsonResponse({'error': str(e)}, status=500)
+
 def add_subscriber(request):
     try:
         data = json.loads(request.body)
 
         email = data.get('email')
-        postal_code = data.get('postal_code')
+        address = data.get('address')
         service_type = data.get('service_type')
         plan = data.get('plan')
         duration = data.get('duration')
         assigned_vendor = data.get('assigned_vendor')
         start_date = data.get('start_date')
+        address = data.get('address')
 
         # Validate email
         if not User.objects.filter(email=email).exists():
@@ -1461,24 +1550,53 @@ def add_subscriber(request):
         except (ValueError, TypeError):
             return JsonResponse({'error': 'Duration must be an integer.'}, status=400)
 
+        # Geocode subscriber address to get latitude and longitude
+        if address:
+            subscriber_lat, subscriber_lon = geocode_address(address)
+            if subscriber_lat is None or subscriber_lon is None:
+                return JsonResponse({'error': 'Invalid address. Could not geocode the address.'}, status=400)
+        else:
+            return JsonResponse({'error': 'Address is required for geocoding.'}, status=400)
+
+        # Calculate distance to all vendors and assign the closest vendor
+        vendors = Vendor.objects.all()
+        closest_vendor = None
+        min_distance = float('inf')  # Initially set to infinity
+
+        for vendor in vendors:
+            vendor_lat = vendor.latitude
+            vendor_lon = vendor.longitude
+
+            # Calculate the distance between subscriber and vendor using haversine
+            distance = haversine(subscriber_lat, subscriber_lon, vendor_lat, vendor_lon)
+
+            if distance < min_distance:
+                min_distance = distance
+                closest_vendor = vendor
+
+        if closest_vendor:
+            assigned_vendor = closest_vendor.vendor_name  # Assign closest vendor
+
         # Save subscriber
         subscriber = Subscriber(
             email=email,
-            postal_code=postal_code,
+            address=address,
             service_type=service_type,
             plan=plan,
             duration=duration,
             assigned_vendor=assigned_vendor,
             start_date=start_date,
+
         )
         subscriber.save()
 
-        return JsonResponse({'message': 'Subscriber added successfully.', 'end_date': subscriber.end_date}, status=201)
+        return JsonResponse({'message': 'Subscriber added successfully.', 'assigned_vendor': assigned_vendor, 'end_date': subscriber.end_date}, status=201)
 
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON.'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
 
 def view_subscribers(request):
     if request.method == 'GET':
@@ -1489,7 +1607,7 @@ def view_subscribers(request):
             subscriber = Subscriber.objects.all()
         data = [{  "id": subscribers.id,
                     "email": subscribers.email,
-                    "postal_code": subscribers.postal_code,
+                    "address": subscribers.address,
                     "service_type": subscribers.service_type,
                     "plan": subscribers.plan,
                     "duration": subscribers.duration,
@@ -1998,22 +2116,118 @@ def Logout(request):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-@csrf_exempt
-def Logout(request):
+
+
+# 1. Add address view
+@login_required
+@csrf_exempt  # Use @csrf_exempt if you're sending requests from React
+def add_address(request):
     if request.method == 'POST':
         try:
-            refresh_token = request.COOKIES.get('refresh_token')
-            if refresh_token:
-                token = OutstandingToken(refresh_token)
-                BlacklistedToken.objects.create(token=token)  # Blacklist the token
-        except Exception as e:
-            pass  # Log the exception if needed
+            data = json.loads(request.body)  # Parse the incoming JSON data
+            street = data.get('street')
+            city = data.get('city')
+            state = data.get('state')
+            zip_code = data.get('zip_code')
+            country = data.get('country')
+            is_default = data.get('is_default', False)  # Default to False if not provided
 
-        response = JsonResponse({"message": "Logout successful"})
-        response.delete_cookie('access_token', samesite='Lax')
-        response.delete_cookie('refresh_token', samesite='Lax')
-        return response
+            # Create a new address
+            address = Address.objects.create(
+                user=request.user,
+                street=street,
+                city=city,
+                state=state,
+                zip_code=zip_code,
+                country=country,
+                is_default=is_default
+            )
 
-    return JsonResponse({"error": "Invalid request method"}, status=405)
+            return JsonResponse({'message': 'Address added successfully', 'address_id': address.id}, status=200)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+
+    return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
 
 
+@login_required
+@csrf_exempt
+def view_addresses(request):
+    if request.method == 'GET':
+        addresses = Address.objects.filter(user=request.user)
+
+        address_list = []
+        for address in addresses:
+            address_list.append({
+                'id': address.id,
+                'street': address.street,
+                'city': address.city,
+                'state': address.state,
+                'zip_code': address.zip_code,
+                'country': address.country,
+                'is_default': address.is_default,
+            })
+
+        return JsonResponse({'addresses': address_list})
+    else:
+        return JsonResponse({'Error':'Invalid request method'})
+
+
+@login_required
+@csrf_exempt
+def set_default_address(request, address_id):
+    try:
+        # Get the address by ID from the URL
+        address = Address.objects.get(id=address_id, user=request.user)
+    except Address.DoesNotExist:
+        return JsonResponse({'error': 'Address not found'}, status=404)
+
+    # Set the selected address as default
+    Address.objects.filter(user=request.user).update(is_default=False)  # Unset other addresses
+    address.is_default = True
+    address.save()
+
+    return JsonResponse({'message': 'Default address set successfully'}, status=200)
+
+
+# 4. Shipping address selection
+@login_required
+@csrf_exempt
+def shipping_address(request):
+    if request.method == 'GET':
+        # Fetch all addresses for the logged-in user
+        addresses = Address.objects.filter(user=request.user)
+
+        address_list = []
+        for address in addresses:
+            address_list.append({
+                'id': address.id,
+                'street': address.street,
+                'city': address.city,
+                'state': address.state,
+                'zip_code': address.zip_code,
+                'country': address.country,
+                'is_default': address.is_default,
+            })
+
+        return JsonResponse({'addresses': address_list})
+
+    elif request.method == 'POST':
+        try:
+            data = json.loads(request.body)  # Get the selected address ID from the request
+            address_id = data.get('address_id')
+
+            # Try to fetch the selected address for shipping
+            selected_address = Address.objects.get(id=address_id, user=request.user)
+
+            # Process the selected address (e.g., store with the order)
+            return JsonResponse({'message': 'Address selected for shipping', 'address_id': selected_address.id},
+                                status=200)
+
+        except Address.DoesNotExist:
+            return JsonResponse({'error': 'Address not found'}, status=404)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+
+    return JsonResponse({'error': 'Only POST or GET methods are allowed'}, status=405)
