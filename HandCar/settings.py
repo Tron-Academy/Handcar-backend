@@ -151,12 +151,24 @@ WSGI_APPLICATION = 'HandCar.wsgi.application'
 #
 # }
 
-import dj_database_url
-import os
 
+import os
+import dj_database_url
+
+# Ensure the DATABASE_URL environment variable is being used correctly
+DATABASE_URL = os.getenv('DATABASE_URL')  # This gets the DATABASE_URL from Render environment variables
+
+# Use dj_database_url to parse the URL and configure the DATABASES setting
 DATABASES = {
-    'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
+    'default': dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600  # Optional: Enables connection pooling for performance improvement
+    )
 }
+import os
+print("DATABASE_URL:", os.getenv('DATABASE_URL'))
+
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
