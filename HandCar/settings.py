@@ -40,7 +40,8 @@ SECRET_KEY = 'django-insecure-g*6$8q350_^v7k=e-%ky4$&nn48ds8=&mvpqi5&)j=d_n5b(b!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['App1.onrender.com']
+ALLOWED_HOSTS = ['handcar-backend-1.onrender.com', '127.0.0.1', 'localhost']
+
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
