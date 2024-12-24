@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
 
+from django.core.exceptions import ImproperlyConfigured
+
 from . import keys
 from pathlib import Path
 
@@ -151,22 +153,43 @@ WSGI_APPLICATION = 'HandCar.wsgi.application'
 #
 # }
 
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from the .env file
+load_dotenv()
+
 
 import os
-import dj_database_url
+from urllib.parse import urlparse
 
-# Ensure the DATABASE_URL environment variable is being used correctly
-DATABASE_URL = os.getenv('DATABASE_URL')  # This gets the DATABASE_URL from Render environment variables
+DATABASE_URL = os.getenv('DATABASE_URL')
 
-# Use dj_database_url to parse the URL and configure the DATABASES setting
-DATABASES = {
-    'default': dj_database_url.config(
-        default=DATABASE_URL,
-        conn_max_age=600  # Optional: Enables connection pooling for performance improvement
-    )
-}
-import os
-print("DATABASE_URL:", os.getenv('DATABASE_URL'))
+if DATABASE_URL:
+    url = urlparse(DATABASE_URL)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': url.path[1:],  # Remove the leading slash
+            'USER': url.username,
+            'PASSWORD': url.password,
+            'HOST': url.hostname,
+            'PORT': url.port,
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'postgres',
+            'USER': 'postgres',
+            'PASSWORD': 'admin',
+            'HOST': 'localhost',
+            'PORT': '5432',
+        }
+    }
+
+print(f"DATABASE_URL: {os.getenv('DATABASE_URL')}")
 
 
 
@@ -206,6 +229,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
