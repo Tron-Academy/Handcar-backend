@@ -8,6 +8,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from geopy.exc import GeocoderTimedOut
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 from twilio.rest import Client
 import random
 from django.core.cache import cache
@@ -222,22 +224,92 @@ def view_products(request):
         return JsonResponse({"product": data}, safe=False)
 
 
-@csrf_exempt
-@login_required
-def add_to_cart(request, product_id):
-    if request.method == 'POST':
+# @csrf_exempt
+# @login_required
+# def add_to_cart(request, product_id):
+#     if request.method == 'POST':
+#         product = get_object_or_404(Product, id=product_id)
+#         cart_item, created = CartItem.objects.get_or_create(user=request.user, product=product)
+#
+#         if not created:
+#             # If the item is already in the cart, increase the quantity
+#             cart_item.quantity += 1
+#             cart_item.save()
+#
+#         return JsonResponse({'message': 'Product added to cart', 'cart_quantity': cart_item.quantity})
+#
+#     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.exceptions import AuthenticationFailed
+from django.shortcuts import get_object_or_404
+from .models import Product, CartItem
+
+# @csrf_exempt
+# def add_to_cart(request, product_id):
+#     # Authenticate the user
+#     authenticator = JWTAuthentication()
+#     try:
+#         user, token = authenticator.authenticate(request)
+#         if not user or not user.is_authenticated:
+#             raise AuthenticationFailed("Authentication required")
+#     except AuthenticationFailed as e:
+#         return JsonResponse({'error': str(e)}, status=401)
+#
+#     if request.method == 'POST':
+#         product = get_object_or_404(Product, id=product_id)
+#         cart_item, created = CartItem.objects.get_or_create(user=user, product=product)
+#
+#         if not created:
+#             # If the item is already in the cart, increase the quantity
+#             cart_item.quantity += 1
+#             cart_item.save()
+#
+#         return JsonResponse({'message': 'Product added to cart', 'cart_quantity': cart_item.quantity})
+#
+#     return JsonResponse({'error': 'Invalid request'}, status=400)
+# Custom JWT Authentication to handle token from HttpOnly cookies
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.permissions import IsAuthenticated
+from .models import Product, CartItem
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+
+# Custom JWT Authentication to handle token from HttpOnly cookies
+class CustomJWTAuthentication(JWTAuthentication):
+    def authenticate(self, request):
+        # First check for the token in cookies
+        token = request.COOKIES.get('your_token_name')  # Replace 'your_token_name' with the actual cookie name
+        if not token:
+            raise AuthenticationFailed('Authentication token not found in cookies')
+
+        # Use the standard JWTAuthentication method to decode and authenticate the token
+        return self.authenticate_credentials(token)
+
+
+class AddToCartView(APIView):
+    # Specify authentication and permission classes
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, product_id):
+        # The user is already authenticated via CustomJWTAuthentication
+        user = request.user
+
+        # Add to cart logic
         product = get_object_or_404(Product, id=product_id)
-        cart_item, created = CartItem.objects.get_or_create(user=request.user, product=product)
+        cart_item, created = CartItem.objects.get_or_create(user=user, product=product)
 
         if not created:
             # If the item is already in the cart, increase the quantity
             cart_item.quantity += 1
             cart_item.save()
 
-        return JsonResponse({'message': 'Product added to cart', 'cart_quantity': cart_item.quantity})
-
-    return JsonResponse({'error': 'Invalid request'}, status=400)
-
+        return Response({"message": "Product added to cart", "cart_quantity": cart_item.quantity})
 
 
 @csrf_exempt

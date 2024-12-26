@@ -46,12 +46,12 @@ ALLOWED_HOSTS = ['*', '127.0.0.1', 'localhost', 'handcar-backend-1.onrender.com'
 
 
 
-
-
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+
 
 # Application definition
 
