@@ -800,14 +800,63 @@ def view_products(request):
     
     
 
+
+# def edit_product(request, product_id):
+#     if request.method == 'PUT':
+#         try:
+#             # Retrieve the product to be edited
+#             product = get_object_or_404(Product, id=product_id)
+#
+#             # Parse JSON data
+#             data = json.loads(request.body)
+#
+#             # Update fields if provided
+#             product.name = data.get('name', product.name)
+#             category_id = data.get('category_id')
+#             if category_id:
+#                 product.category = get_object_or_404(Category, id=category_id)
+#             brand_id = data.get('brand_id')
+#             if brand_id:
+#                 product.brand = get_object_or_404(Brand, id=brand_id)
+#                 product.price = data.get('price', product.price)
+#                 product.description = data.get('description', product.description)
+#                 product.is_bestseller = data.get('is_bestseller', product.is_bestseller)
+#                 product.discount_percentage = data.get('discount_percentage', product.discount_percentage)
+#
+#             # Save the updated product
+#             product.save()
+#
+#             return JsonResponse({"message": "Product updated successfully."}, status=200)
+#
+#         except Exception as e:
+#             return JsonResponse({"error": str(e)}, status=500)
+#
+#     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
 @csrf_exempt
 def edit_product(request, product_id):
-    if request.method == 'PUT':
+    if request.method == 'GET':
+        # Retrieve the product to be edited
+        product = get_object_or_404(Product, id=product_id)
+
+        # Prepare the response data
+        product_data = {
+            "name": product.name,
+            "category_id": product.category.id if product.category else None,
+            "brand_id": product.brand.id if product.brand else None,
+            "price": product.price,
+            "description": product.description,
+            "is_bestseller": product.is_bestseller,
+            "discount_percentage": product.discount_percentage
+        }
+
+        return JsonResponse(product_data, status=200)
+
+    elif request.method == 'POST':
         try:
             # Retrieve the product to be edited
             product = get_object_or_404(Product, id=product_id)
 
-            # Parse JSON data
+            # Parse JSON data from POST request
             data = json.loads(request.body)
 
             # Update fields if provided
@@ -818,10 +867,10 @@ def edit_product(request, product_id):
             brand_id = data.get('brand_id')
             if brand_id:
                 product.brand = get_object_or_404(Brand, id=brand_id)
-                product.price = data.get('price', product.price)
-                product.description = data.get('description', product.description)
-                product.is_bestseller = data.get('is_bestseller', product.is_bestseller)
-                product.discount_percentage = data.get('discount_percentage', product.discount_percentage)
+            product.price = data.get('price', product.price)
+            product.description = data.get('description', product.description)
+            product.is_bestseller = data.get('is_bestseller', product.is_bestseller)
+            product.discount_percentage = data.get('discount_percentage', product.discount_percentage)
 
             # Save the updated product
             product.save()
@@ -832,8 +881,6 @@ def edit_product(request, product_id):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
-
-
 
 @csrf_exempt
 def delete_product(request, product_id):
