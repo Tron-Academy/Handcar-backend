@@ -832,6 +832,12 @@ def view_products(request):
 #             return JsonResponse({"error": str(e)}, status=500)
 #
 #     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from .models import Product, Category, Brand
+import json
+from cloudinary.uploader import upload  # If using Cloudinary for image upload
 @csrf_exempt
 def edit_product(request, product_id):
     if request.method == 'GET':
@@ -841,12 +847,13 @@ def edit_product(request, product_id):
         # Prepare the response data
         product_data = {
             "name": product.name,
-            "category_id": product.category.id if product.category else None,
-            "brand_id": product.brand.id if product.brand else None,
+            "category_name": product.category.name if product.category else None,
+            "brand_name": product.brand.name if product.brand else None,
             "price": product.price,
             "description": product.description,
             "is_bestseller": product.is_bestseller,
-            "discount_percentage": product.discount_percentage
+            "discount_percentage": product.discount_percentage,
+            "image": product.image  # Image URL
         }
 
         return JsonResponse(product_data, status=200)
@@ -856,31 +863,72 @@ def edit_product(request, product_id):
             # Retrieve the product to be edited
             product = get_object_or_404(Product, id=product_id)
 
-            # Parse JSON data from POST request
-            data = json.loads(request.body)
+            # Check if the request contains files and form-data
+            if request.FILES.get('image'):  # Check for image file
+                image_file = request.FILES['image']
+            else:
+                image_file = None  # In case no image is uploaded
 
-            # Update fields if provided
-            product.name = data.get('name', product.name)
-            category_id = data.get('category_id')
-            if category_id:
-                product.category = get_object_or_404(Category, id=category_id)
-            brand_id = data.get('brand_id')
-            if brand_id:
-                product.brand = get_object_or_404(Brand, id=brand_id)
-            product.price = data.get('price', product.price)
-            product.description = data.get('description', product.description)
-            product.is_bestseller = data.get('is_bestseller', product.is_bestseller)
-            product.discount_percentage = data.get('discount_percentage', product.discount_percentage)
+            # Get other data from the form (using request.POST)
+            name = request.POST.get('name', product.name)
+            category_name = request.POST.get('category_name', product.category.name if product.category else '')
+            brand_name = request.POST.get('brand_name', product.brand.name if product.brand else '')
+            price = request.POST.get('price', product.price)
+            description = request.POST.get('description', product.description)
+            is_bestseller = request.POST.get('is_bestseller', product.is_bestseller)
+            discount_percentage = request.POST.get('discount_percentage', product.discount_percentage)
+
+            # Validate required fields
+            if not name or not category_name or not brand_name or not price:
+                return JsonResponse({"error": "Name, category_name, brand_name, and price are required."}, status=400)
+
+            # Retrieve related objects by name
+            category = get_object_or_404(Category, name=category_name)
+            brand = get_object_or_404(Brand, name=brand_name)
+
+            # Handle image upload to Cloudinary (if new image is provided)
+            image_url = product.image  # Keep the existing image URL by default
+            if image_file:
+                try:
+                    upload_result = upload(image_file, folder="product_images/")
+                    image_url = upload_result['secure_url']
+                except Exception as e:
+                    return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
+
+            # Update the product instance with new data
+            product.name = name
+            product.category = category
+            product.brand = brand
+            product.price = price
+            product.description = description
+            product.is_bestseller = is_bestseller
+            product.discount_percentage = discount_percentage
+            product.image = image_url  # Save the Cloudinary image URL
 
             # Save the updated product
             product.save()
 
-            return JsonResponse({"message": "Product updated successfully."}, status=200)
+            return JsonResponse({
+                "message": "Product updated successfully.",
+                "product": {
+                    "id": product.id,
+                    "name": product.name,
+                    "category": product.category.name,
+                    "brand": product.brand.name,
+                    "price": str(product.price),
+                    "description": product.description,
+                    "is_bestseller": product.is_bestseller,
+                    "discount_percentage": product.discount_percentage,
+                    "image": product.image,  # Return Cloudinary image URL
+                    "created_at": product.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                }
+            }, status=200)
 
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
 
 @csrf_exempt
 def delete_product(request, product_id):
