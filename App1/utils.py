@@ -1,4 +1,5 @@
 import requests
+import math
 
 def geocode_address(address):
     api_key = 'f95c2a61235f4365a6f22eb79ce8446a'
@@ -10,9 +11,6 @@ def geocode_address(address):
         return latitude, longitude
     return None, None
 
-
-
-import math
 
 def haversine(lat1, lon1, lat2, lon2):
     # Radius of the Earth in kilometers
@@ -36,9 +34,35 @@ def haversine(lat1, lon1, lat2, lon2):
     distance = R * c
     return distance
 
-# Example usage
-lat1, lon1 = 40.757261, -73.985899  # Times Square, New York
-lat2, lon2 = 28.704060, 77.102493  # Delhi, India
+def get_geocoded_location(address):
+    """
+    This function geocodes an address and returns the latitude and longitude.
+    It ensures that the geocode logic is reusable.
+    """
+    latitude, longitude = geocode_address(address)
+    if latitude is None or longitude is None:
+        raise ValueError("Invalid address. Could not geocode the address.")
+    return latitude, longitude
 
-distance = haversine(lat1, lon1, lat2, lon2)
-print(f"Distance: {distance} km")
+
+def get_nearby_vendors(subscriber_lat, subscriber_lon):
+    # Import inside the function to avoid circular import
+    from .models import Vendor  # Move this import inside the function
+
+    # Get vendors from the database and calculate distance
+    vendors = Vendor.objects.all()
+    nearby_vendors = []
+
+    for vendor in vendors:
+        vendor_lat = vendor.latitude
+        vendor_lon = vendor.longitude
+        distance = haversine(subscriber_lat, subscriber_lon, vendor_lat, vendor_lon)
+
+        if distance <= 50:  # 50 km threshold
+            nearby_vendors.append({
+                'vendor_name': vendor.vendor_name,
+                'vendor_address': vendor.address,
+                'distance': distance
+            })
+
+    return nearby_vendors

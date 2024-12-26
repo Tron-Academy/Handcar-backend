@@ -65,8 +65,23 @@ INSTALLED_APPS = [
     'App1',
     'rest_framework',
     'corsheaders',
-    'rest_framework_simplejwt.token_blacklist'
+    'rest_framework_simplejwt.token_blacklist',
+    'channels'
 ]
+
+
+ASGI_APPLICATION = 'your_project.routing.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
+
+
 # REST_FRAMEWORK = {
 #     'DEFAULT_AUTHENTICATION_CLASSES': (
 #         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -139,7 +154,7 @@ WSGI_APPLICATION = 'HandCar.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
+#
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.postgresql',
@@ -153,35 +168,12 @@ WSGI_APPLICATION = 'HandCar.wsgi.application'
 #
 # }
 
-import os
-from urllib.parse import urlparse
-
-# Get the database URL from environment variable or hardcode the URL if necessary
-DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://handcar_xown_user:rZOboJt0BrUp2Rnb0KYhnSLOSPTnbqEC@dpg-ctlasd2j1k6c73cvecgg-a/handcar_xown')
-
-# Parse the DATABASE_URL
-url = urlparse(DATABASE_URL)
-
-# Update the DATABASES setting
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': url.path[1:],  # Remove the leading '/' in the URL path to get the database name
-        'USER': url.username,
-        'PASSWORD': url.password,
-        'HOST': url.hostname,
-        'PORT': url.port or 5432,  # Default to 5432 if no port is specified
-    }
-}
-
 import dj_database_url
 
-# Get the database URL from the .env file
-DATABASE_URL = os.getenv('DATABASE_URL')
-
-# Parse the database URL and configure Django to use it
 DATABASES = {
-    'default': dj_database_url.config(default=DATABASE_URL)
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL')  # DATABASE_URL environment variable
+    )
 }
 
 

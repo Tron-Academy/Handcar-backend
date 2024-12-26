@@ -1467,13 +1467,20 @@ from django.contrib.auth.models import User
 
 from .utils import haversine, geocode_address
 
-@csrf_exempt
+
+import json
+from datetime import datetime, timedelta
+from django.http import JsonResponse
+from .models import Subscriber, Vendor
+from .utils import get_geocoded_location, get_nearby_vendors
+
+# @csrf_exempt
 # def add_subscriber(request):
 #     try:
 #         data = json.loads(request.body)
 #
 #         email = data.get('email')
-#         postal_code = data.get('postal_code')
+#         address = data.get('address')
 #         service_type = data.get('service_type')
 #         plan = data.get('plan')
 #         duration = data.get('duration')
@@ -1499,24 +1506,56 @@ from .utils import haversine, geocode_address
 #         except (ValueError, TypeError):
 #             return JsonResponse({'error': 'Duration must be an integer.'}, status=400)
 #
+#         # Geocode subscriber address to get latitude and longitude using the reusable function
+#         if address:
+#             subscriber_lat, subscriber_lon = get_geocoded_location(address)
+#         else:
+#             return JsonResponse({'error': 'Address is required for geocoding.'}, status=400)
+#
+#         # Get nearby vendors using the reusable function
+#         nearby_vendors = get_nearby_vendors(subscriber_lat, subscriber_lon)
+#
+#         if not nearby_vendors:
+#             return JsonResponse({'error': 'No nearby vendors found.'}, status=404)
+#
 #         # Save subscriber
 #         subscriber = Subscriber(
 #             email=email,
-#             postal_code=postal_code,
+#             address=address,
 #             service_type=service_type,
 #             plan=plan,
 #             duration=duration,
 #             assigned_vendor=assigned_vendor,
 #             start_date=start_date,
+#             latitude=subscriber_lat,
+#             longitude=subscriber_lon,
 #         )
 #         subscriber.save()
 #
-#         return JsonResponse({'message': 'Subscriber added successfully.', 'end_date': subscriber.end_date}, status=201)
+#         return JsonResponse({'message': 'Subscriber added successfully.', 'assigned_vendor': assigned_vendor, 'end_date': subscriber.end_date, 'nearby_vendors': nearby_vendors}, status=201)
 #
 #     except json.JSONDecodeError:
 #         return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+#     except ValueError as e:
+#         return JsonResponse({'error': str(e)}, status=400)
 #     except Exception as e:
 #         return JsonResponse({'error': str(e)}, status=500)
+
+
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from .models import Vendor  # Import Vendor model to get vendor details
+
+def send_vendor_notification(vendor_id, message):
+    # Send a message to the vendor's group
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'vendor_{vendor_id}',  # Vendor group name
+        {
+            'type': 'vendor_notification',  # Event type
+            'message': message,  # Notification message
+        }
+    )
 
 def add_subscriber(request):
     try:
@@ -1529,7 +1568,6 @@ def add_subscriber(request):
         duration = data.get('duration')
         assigned_vendor = data.get('assigned_vendor')
         start_date = data.get('start_date')
-        address = data.get('address')
 
         # Validate email
         if not User.objects.filter(email=email).exists():
@@ -1552,30 +1590,15 @@ def add_subscriber(request):
 
         # Geocode subscriber address to get latitude and longitude
         if address:
-            subscriber_lat, subscriber_lon = geocode_address(address)
-            if subscriber_lat is None or subscriber_lon is None:
-                return JsonResponse({'error': 'Invalid address. Could not geocode the address.'}, status=400)
+            subscriber_lat, subscriber_lon = get_geocoded_location(address)
         else:
             return JsonResponse({'error': 'Address is required for geocoding.'}, status=400)
 
-        # Calculate distance to all vendors and assign the closest vendor
-        vendors = Vendor.objects.all()
-        closest_vendor = None
-        min_distance = float('inf')  # Initially set to infinity
+        # Get nearby vendors
+        nearby_vendors = get_nearby_vendors(subscriber_lat, subscriber_lon)
 
-        for vendor in vendors:
-            vendor_lat = vendor.latitude
-            vendor_lon = vendor.longitude
-
-            # Calculate the distance between subscriber and vendor using haversine
-            distance = haversine(subscriber_lat, subscriber_lon, vendor_lat, vendor_lon)
-
-            if distance < min_distance:
-                min_distance = distance
-                closest_vendor = vendor
-
-        if closest_vendor:
-            assigned_vendor = closest_vendor.vendor_name  # Assign closest vendor
+        if not nearby_vendors:
+            return JsonResponse({'error': 'No nearby vendors found.'}, status=404)
 
         # Save subscriber
         subscriber = Subscriber(
@@ -1586,17 +1609,22 @@ def add_subscriber(request):
             duration=duration,
             assigned_vendor=assigned_vendor,
             start_date=start_date,
-
+            latitude=subscriber_lat,
+            longitude=subscriber_lon,
         )
         subscriber.save()
 
-        return JsonResponse({'message': 'Subscriber added successfully.', 'assigned_vendor': assigned_vendor, 'end_date': subscriber.end_date}, status=201)
+        # Send a notification to the assigned vendor
+        send_vendor_notification(assigned_vendor, f'You have a new subscriber assigned. Subscriber details: {subscriber.email}')
+
+        return JsonResponse({'message': 'Subscriber added successfully.', 'assigned_vendor': assigned_vendor, 'end_date': subscriber.end_date, 'nearby_vendors': nearby_vendors}, status=201)
 
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
 
 def view_subscribers(request):
     if request.method == 'GET':
