@@ -171,6 +171,9 @@ DATABASES = {
         default=config('DATABASE_URL')  # DATABASE_URL environment variable
     )
 }
+from decouple import config
+
+print(config('DATABASE_URL'))  # Check if it prints the correct value
 
 
 # Password validation
