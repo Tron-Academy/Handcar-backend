@@ -100,9 +100,10 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_COOKIE': 'access_token',                  # Name of the access token cookie
     'AUTH_COOKIE_REFRESH': 'refresh_token',         # Name of the refresh token cookie
-    'AUTH_COOKIE_SECURE': False,                    # Set to True in production
+    'AUTH_COOKIE_SECURE': True,                    # Set to True in production
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_PATH': '/',                        # Set cookie path
+    'AUTH_COOKIE_SAMESITE': 'None',
     # 'AUTH_COOKIE_SAMESITE': 'Lax',                  # Adjust based on your needs
 }
 
