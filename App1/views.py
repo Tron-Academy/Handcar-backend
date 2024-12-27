@@ -2155,15 +2155,15 @@ def admin_login(request):
                 key=settings.SIMPLE_JWT['AUTH_COOKIE'],
                 value=str(refresh.access_token),
                 httponly=True,  # Prevent access via JavaScript
-                secure=False,  # Set True in production for HTTPS
-                samesite='Lax',  # Adjust as per requirement
+                secure=True,  # Set True in production for HTTPS
+                samesite='None',  # Adjust as per requirement
             )
             response.set_cookie(
                 key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
                 value=str(refresh),
                 httponly=True,
-                secure=False,
-                samesite='Lax',
+                secure=True,
+                samesite='None',
             )
             return response
 
@@ -2195,11 +2195,11 @@ def UserLogin(request):
             })
             response.set_cookie(
                 'access_token', str(refresh.access_token),
-                max_age=timedelta(minutes=15), httponly=True, samesite='Lax'
+                max_age=timedelta(minutes=15), httponly=True, samesite='None'
             )
             response.set_cookie(
                 'refresh_token', str(refresh),
-                max_age=timedelta(days=1), httponly=True, samesite='Lax'
+                max_age=timedelta(days=1), httponly=True, samesite='None'
             )
             return response
 
@@ -2273,11 +2273,11 @@ def VendorLogin(request):
                 # Set tokens in secure cookies
                 response.set_cookie(
                     'access_token', str(refresh.access_token),
-                    max_age=timedelta(minutes=15), httponly=True, samesite='Lax'
+                    max_age=timedelta(minutes=15), httponly=True, samesite='None'
                 )
                 response.set_cookie(
                     'refresh_token', str(refresh),
-                    max_age=timedelta(days=1), httponly=True, samesite='Lax'
+                    max_age=timedelta(days=1), httponly=True, samesite='None'
                 )
                 return response
 
@@ -2305,8 +2305,8 @@ def Logout(request):
             pass  # Log the exception if needed
 
         response = JsonResponse({"message": "Logout successful"})
-        response.delete_cookie('access_token', samesite='Lax')
-        response.delete_cookie('refresh_token', samesite='Lax')
+        response.delete_cookie('access_token', samesite='None')
+        response.delete_cookie('refresh_token', samesite='None')
         return response
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
