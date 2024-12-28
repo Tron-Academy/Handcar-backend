@@ -2179,7 +2179,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.contrib.auth import authenticate
 
-csrf_exempt
+@csrf_exempt
 def UserLogin(request):
     if request.method == 'POST':
         username = request.POST.get('username')
