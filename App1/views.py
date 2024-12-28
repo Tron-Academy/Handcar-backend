@@ -221,16 +221,24 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
 # Custom JWT Authentication to handle token from HttpOnly cookies
+# class CustomJWTAuthentication(JWTAuthentication):
+#     def authenticate(self, request):
+#         # First check for the token in cookies
+#         token = request.COOKIES.get('your_token_name')  # Replace 'your_token_name' with the actual cookie name
+#         if not token:
+#             raise AuthenticationFailed('Authentication token not found in cookies')
+#
+#         # Use the standard JWTAuthentication method to decode and authenticate the token
+#         return self.authenticate_credentials(token)
 class CustomJWTAuthentication(JWTAuthentication):
     def authenticate(self, request):
-        # First check for the token in cookies
-        token = request.COOKIES.get('your_token_name')  # Replace 'your_token_name' with the actual cookie name
+        # Retrieve the token from the cookie using the name specified in settings.py
+        token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE'])
         if not token:
             raise AuthenticationFailed('Authentication token not found in cookies')
 
         # Use the standard JWTAuthentication method to decode and authenticate the token
         return self.authenticate_credentials(token)
-
 
 class AddToCartView(APIView):
     # Specify authentication and permission classes
