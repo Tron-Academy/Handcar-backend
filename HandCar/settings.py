@@ -103,7 +103,7 @@ SIMPLE_JWT = {
     'AUTH_COOKIE_SECURE': False,                    # Set to True in production
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_PATH': '/',                        # Set cookie path
-    'AUTH_COOKIE_SAMESITE': 'None',
+    # 'AUTH_COOKIE_SAMESITE': 'None',
     # 'AUTH_COOKIE_SAMESITE': 'Lax',                  # Adjust based on your needs
 }
 

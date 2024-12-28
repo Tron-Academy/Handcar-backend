@@ -2048,77 +2048,77 @@ from rest_framework_simplejwt.tokens import RefreshToken
 #
 #         return Response({"error": "Invalid admin credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
-@csrf_exempt
-def admin_login(request):
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-
-        print(f"Username: {username}, Password: {password}")  # Debug input
-
-        user = authenticate(username=username, password=password)
-
-        if user:
-            print(f"User authenticated: {user.username}, Is superuser: {user.is_superuser}")  # Debug authentication
-        else:
-            print("Authentication failed")
-
-        if user and user.is_superuser:
-            refresh = RefreshToken.for_user(user)
-            response= JsonResponse({
-                "message": "Admin login successful",
-                "access_token": str(refresh.access_token),
-                "refresh_token": str(refresh)
-            })
-            response.set_cookie(
-                'access_token', str(refresh.access_token),
-                max_age=timedelta(minutes=15), httponly=True, samesite='Lax'
-            )
-            response.set_cookie(
-                'refresh_token', str(refresh),
-                max_age=timedelta(days=1), httponly=True, samesite='Lax'
-            )
-            return response
-
-        return JsonResponse({"error": "Invalid admin credentials"}, status=401)
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
-
-
 # @csrf_exempt
 # def admin_login(request):
 #     if request.method == 'POST':
 #         username = request.POST.get('username')
 #         password = request.POST.get('password')
 #
+#         print(f"Username: {username}, Password: {password}")  # Debug input
+#
 #         user = authenticate(username=username, password=password)
+#
+#         if user:
+#             print(f"User authenticated: {user.username}, Is superuser: {user.is_superuser}")  # Debug authentication
+#         else:
+#             print("Authentication failed")
+#
 #         if user and user.is_superuser:
 #             refresh = RefreshToken.for_user(user)
-#             response = JsonResponse({
+#             response= JsonResponse({
 #                 "message": "Admin login successful",
 #                 "access_token": str(refresh.access_token),
 #                 "refresh_token": str(refresh)
 #             })
-#             # Set cookies
 #             response.set_cookie(
-#                 key=settings.SIMPLE_JWT['AUTH_COOKIE'],
-#                 value=str(refresh.access_token),
-#                 httponly=True,  # Prevent access via JavaScript
-#                 secure=True,  # Set True in production for HTTPS
-#                 samesite='None',  # Adjust as per requirement
+#                 'access_token', str(refresh.access_token),
+#                 max_age=timedelta(minutes=15), httponly=True, samesite='Lax'
 #             )
 #             response.set_cookie(
-#                 key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
-#                 value=str(refresh),
-#                 httponly=True,
-#                 secure=True,
-#                 samesite='None',
+#                 'refresh_token', str(refresh),
+#                 max_age=timedelta(days=1), httponly=True, samesite='Lax'
 #             )
 #             return response
 #
 #         return JsonResponse({"error": "Invalid admin credentials"}, status=401)
 #
 #     return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+@csrf_exempt
+def admin_login(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(username=username, password=password)
+        if user and user.is_superuser:
+            refresh = RefreshToken.for_user(user)
+            response = JsonResponse({
+                "message": "Admin login successful",
+                "access_token": str(refresh.access_token),
+                "refresh_token": str(refresh)
+            })
+            # Set cookies
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+                value=str(refresh.access_token),
+                httponly=True,  # Prevent access via JavaScript
+                secure=True,  # Set True in production for HTTPS
+                                 # Adjust as per requirement
+            )
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
+                value=str(refresh),
+                httponly=True,
+                secure=True,
+
+            )
+            return response
+
+        return JsonResponse({"error": "Invalid admin credentials"}, status=401)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
 
 
 from django.http import JsonResponse
@@ -2128,39 +2128,77 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.contrib.auth import authenticate
 
+# @csrf_exempt
+# def UserLogin(request):
+#     if request.method == 'POST':
+#         username = request.POST.get('username')
+#         password = request.POST.get('password')
+#
+#         user = authenticate(username=username, password=password)
+#
+#         if user and not user.is_superuser:
+#             # Generate JWT tokens
+#             refresh = RefreshToken.for_user(user)
+#             response = JsonResponse({
+#                 "message": "User login successful",
+#                 "access_token": str(refresh.access_token),
+#                 "refresh_token": str(refresh)
+#             })
+#             # Set cookies with SameSite=None and Secure=True
+#             response.set_cookie(
+#                 'access_token', str(refresh.access_token),
+#                 max_age=15 * 60, httponly=True, samesite='None', secure=False
+#             )
+#             response.set_cookie(
+#                 'refresh_token', str(refresh),
+#                 max_age=24 * 60 * 60, httponly=True, samesite='None', secure=False
+#             )
+#             return response
+#
+#         return JsonResponse({"error": "Invalid user credentials"}, status=401)
+#
+#     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+
+import json
+
 @csrf_exempt
 def UserLogin(request):
     if request.method == 'POST':
+        content_type = request.content_type
+        print(f"Content-Type: {content_type}")
+        print(f"Request Body: {request.body}")
+        print(f"POST Data: {request.POST}")
+
         username = request.POST.get('username')
         password = request.POST.get('password')
+
+        if not username or not password:
+            return JsonResponse({"error": "Missing username or password"}, status=400)
 
         user = authenticate(username=username, password=password)
 
         if user and not user.is_superuser:
-            # Generate JWT tokens
             refresh = RefreshToken.for_user(user)
             response = JsonResponse({
                 "message": "User login successful",
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
             })
-            # Set cookies with SameSite=None and Secure=True
             response.set_cookie(
                 'access_token', str(refresh.access_token),
-                max_age=15 * 60, httponly=True, samesite='None', secure=False
+                max_age=15 * 60, httponly=True, secure=False
             )
             response.set_cookie(
                 'refresh_token', str(refresh),
-                max_age=24 * 60 * 60, httponly=True, samesite='None', secure=False
+                max_age=24 * 60 * 60, httponly=True, secure=False
             )
             return response
 
         return JsonResponse({"error": "Invalid user credentials"}, status=401)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
-
-
-
 
 
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -2227,11 +2265,11 @@ def VendorLogin(request):
                 # Set tokens in secure cookies
                 response.set_cookie(
                     'access_token', str(refresh.access_token),
-                    max_age=timedelta(minutes=15), httponly=True, samesite='None'
+                    max_age=timedelta(minutes=15), httponly=True
                 )
                 response.set_cookie(
                     'refresh_token', str(refresh),
-                    max_age=timedelta(days=1), httponly=True, samesite='None'
+                    max_age=timedelta(days=1), httponly=True
                 )
                 return response
 
