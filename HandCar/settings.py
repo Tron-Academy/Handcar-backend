@@ -100,7 +100,7 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_COOKIE': 'access_token',                  # Name of the access token cookie
     'AUTH_COOKIE_REFRESH': 'refresh_token',         # Name of the refresh token cookie
-    'AUTH_COOKIE_SECURE': True,                    # Set to True in production
+    'AUTH_COOKIE_SECURE': False,                    # Set to True in production
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_PATH': '/',                        # Set cookie path
     'AUTH_COOKIE_SAMESITE': 'None',
@@ -108,13 +108,20 @@ SIMPLE_JWT = {
 }
 
 
+# SIMPLE_JWT = {
+#     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+#     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+#     'ROTATE_REFRESH_TOKENS': False,
+#     'BLACKLIST_AFTER_ROTATION': True,
+# }
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_COOKIE': 'access_token',  # Name of the cookie for access token
+    'AUTH_COOKIE_REFRESH': 'refresh_token',  # Name of the cookie for refresh token
 }
-
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

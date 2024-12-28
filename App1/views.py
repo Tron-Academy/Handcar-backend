@@ -2176,7 +2176,6 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-
 @csrf_exempt
 def UserLogin(request):
     if request.method == 'POST':
@@ -2193,20 +2192,22 @@ def UserLogin(request):
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
             })
+            # Set cookies with SameSite=None and Secure=True
             response.set_cookie(
                 'access_token', str(refresh.access_token),
-                max_age=15 * 60,  # 15 minutes
-                httponly=True, samesite='None', secure=False  # Set secure=True in production
+                max_age=15 * 60, httponly=True, samesite='None', secure=False
             )
             response.set_cookie(
                 'refresh_token', str(refresh),
-                max_age=24 * 60 * 60,  # 1 day
-                httponly=True, samesite='None', secure=False  # Set secure=True in production
+                max_age=24 * 60 * 60, httponly=True, samesite='None', secure=False
             )
+            return response
 
         return JsonResponse({"error": "Invalid user credentials"}, status=401)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
 
 
 
