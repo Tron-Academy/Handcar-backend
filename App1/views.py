@@ -2195,13 +2195,12 @@ def UserLogin(request):
             })
             response.set_cookie(
                 'access_token', str(refresh.access_token),
-                max_age=timedelta(minutes=15), httponly=True, samesite='None'
+                max_age=int(timedelta(minutes=15).total_seconds()), httponly=True, samesite='None'
             )
             response.set_cookie(
                 'refresh_token', str(refresh),
-                max_age=timedelta(days=1), httponly=True, samesite='None'
+                max_age=int(timedelta(days=1).total_seconds()), httponly=True, samesite='None'
             )
-            return response
 
         return JsonResponse({"error": "Invalid user credentials"}, status=401)
 
