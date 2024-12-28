@@ -17,45 +17,6 @@ from .models import Product, WishlistItem, CartItem, Review, Address, Category, 
 from .utils import geocode_address
 
 
-# @csrf_exempt
-# def signup(request):
-#     if request.method == 'POST':
-#         # Get user details from the POST request
-#         name = request.POST.get('name')
-#         email = request.POST.get('email')
-#         phone = request.POST.get('phone')
-#         password = request.POST.get('password')
-#
-#         # Check if all fields are provided
-#         if not all([name, email, phone, password]):
-#             return JsonResponse({'error': 'All fields are required'}, status=400)
-#
-#         # Validate email format
-#         try:
-#             validate_email(email)
-#         except ValidationError:
-#             return JsonResponse({'error': 'Invalid email format'}, status=400)
-#
-#         # Check if the email already exists
-#         if User.objects.filter(email=email).exists():
-#             return JsonResponse({'error': 'Email is already taken'}, status=400)
-#
-#         # Check if the phone number is already registered
-#         if User.objects.filter(username=phone).exists():
-#             return JsonResponse({'error': 'Phone number is already registered'}, status=400)
-#
-#         # Create the user
-#         user = User.objects.create(
-#             username=phone,  # Using phone as the username
-#             first_name=name,
-#             email=email,
-#             password=make_password(password)  # Hash the password
-#         )
-#
-#         # Respond with success
-#         return JsonResponse({'message': 'Signup successful!'}, status=201)
-#
-#     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 @csrf_exempt
 def signup(request):
@@ -156,26 +117,6 @@ def verify_otp(phone, entered_otp):
         cache.delete(phone)
         return True
     return False
-
-# View for logging in with a password
-# @csrf_exempt
-# def login_with_password(request):
-#     if request.method == 'POST':
-#         phone = request.POST.get('phone')
-#         password = request.POST.get('password')
-#
-#         # Assuming you are using phone as the username field
-#         try:
-#             user = User.objects.get(username=phone)
-#             user = authenticate(request, username=phone, password=password)
-#             if user is not None:
-#                 login(request, user)
-#                 return JsonResponse({'message': 'Login successful!'}, status=200)
-#             else:
-#                 return JsonResponse({'error': 'Invalid password'}, status=400)
-#         except User.DoesNotExist:
-#             return JsonResponse({'error': 'User does not exist'}, status=404)
-#     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
 
@@ -2099,77 +2040,77 @@ from rest_framework_simplejwt.tokens import RefreshToken
 #
 #         return Response({"error": "Invalid admin credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
-# @csrf_exempt
-# def admin_login(request):
-#     if request.method == 'POST':
-#         username = request.POST.get('username')
-#         password = request.POST.get('password')
-#
-#         print(f"Username: {username}, Password: {password}")  # Debug input
-#
-#         user = authenticate(username=username, password=password)
-#
-#         if user:
-#             print(f"User authenticated: {user.username}, Is superuser: {user.is_superuser}")  # Debug authentication
-#         else:
-#             print("Authentication failed")
-#
-#         if user and user.is_superuser:
-#             refresh = RefreshToken.for_user(user)
-#             response= JsonResponse({
-#                 "message": "Admin login successful",
-#                 "access_token": str(refresh.access_token),
-#                 "refresh_token": str(refresh)
-#             })
-#             response.set_cookie(
-#                 'access_token', str(refresh.access_token),
-#                 max_age=timedelta(minutes=15), httponly=True, samesite='Lax'
-#             )
-#             response.set_cookie(
-#                 'refresh_token', str(refresh),
-#                 max_age=timedelta(days=1), httponly=True, samesite='Lax'
-#             )
-#             return response
-#
-#         return JsonResponse({"error": "Invalid admin credentials"}, status=401)
-#
-#     return JsonResponse({"error": "Method not allowed"}, status=405)
-
-
 @csrf_exempt
 def admin_login(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
 
+        print(f"Username: {username}, Password: {password}")  # Debug input
+
         user = authenticate(username=username, password=password)
+
+        if user:
+            print(f"User authenticated: {user.username}, Is superuser: {user.is_superuser}")  # Debug authentication
+        else:
+            print("Authentication failed")
+
         if user and user.is_superuser:
             refresh = RefreshToken.for_user(user)
-            response = JsonResponse({
+            response= JsonResponse({
                 "message": "Admin login successful",
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
             })
-            # Set cookies
             response.set_cookie(
-                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
-                value=str(refresh.access_token),
-                httponly=True,  # Prevent access via JavaScript
-                secure=True,  # Set True in production for HTTPS
-                samesite='None',  # Adjust as per requirement
+                'access_token', str(refresh.access_token),
+                max_age=timedelta(minutes=15), httponly=True, samesite='Lax'
             )
             response.set_cookie(
-                key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
-                value=str(refresh),
-                httponly=True,
-                secure=True,
-                samesite='None',
+                'refresh_token', str(refresh),
+                max_age=timedelta(days=1), httponly=True, samesite='Lax'
             )
             return response
 
         return JsonResponse({"error": "Invalid admin credentials"}, status=401)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+# @csrf_exempt
+# def admin_login(request):
+#     if request.method == 'POST':
+#         username = request.POST.get('username')
+#         password = request.POST.get('password')
+#
+#         user = authenticate(username=username, password=password)
+#         if user and user.is_superuser:
+#             refresh = RefreshToken.for_user(user)
+#             response = JsonResponse({
+#                 "message": "Admin login successful",
+#                 "access_token": str(refresh.access_token),
+#                 "refresh_token": str(refresh)
+#             })
+#             # Set cookies
+#             response.set_cookie(
+#                 key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+#                 value=str(refresh.access_token),
+#                 httponly=True,  # Prevent access via JavaScript
+#                 secure=True,  # Set True in production for HTTPS
+#                 samesite='None',  # Adjust as per requirement
+#             )
+#             response.set_cookie(
+#                 key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
+#                 value=str(refresh),
+#                 httponly=True,
+#                 secure=True,
+#                 samesite='None',
+#             )
+#             return response
+#
+#         return JsonResponse({"error": "Invalid admin credentials"}, status=401)
+#
+#     return JsonResponse({"error": "Method not allowed"}, status=405)
 
 
 from django.http import JsonResponse
@@ -2195,13 +2136,14 @@ def UserLogin(request):
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
             })
+            # Set cookies with SameSite=None and Secure=True
             response.set_cookie(
                 'access_token', str(refresh.access_token),
-                max_age=timedelta(minutes=15), httponly=True, samesite='Lax'
+                max_age=15 * 60, httponly=True, samesite='None', secure=False
             )
             response.set_cookie(
                 'refresh_token', str(refresh),
-                max_age=timedelta(days=1), httponly=True, samesite='Lax'
+                max_age=24 * 60 * 60, httponly=True, samesite='None', secure=False
             )
             return response
 
