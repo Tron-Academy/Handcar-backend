@@ -2162,6 +2162,44 @@ from django.contrib.auth import authenticate
 
 
 import json
+#
+# @csrf_exempt
+# def UserLogin(request):
+#     if request.method == 'POST':
+#         content_type = request.content_type
+#         print(f"Content-Type: {content_type}")
+#         print(f"Request Body: {request.body}")
+#         print(f"POST Data: {request.POST}")
+#
+#         username = request.POST.get('username')
+#         password = request.POST.get('password')
+#
+#         if not username or not password:
+#             return JsonResponse({"error": "Missing username or password"}, status=400)
+#
+#         user = authenticate(username=username, password=password)
+#
+#         if user and not user.is_superuser:
+#             refresh = RefreshToken.for_user(user)
+#             response = JsonResponse({
+#                 "message": "User login successful",
+#                 "access_token": str(refresh.access_token),
+#                 "refresh_token": str(refresh)
+#             })
+#             response.set_cookie(
+#                 'access_token', str(refresh.access_token),
+#                 max_age=15 * 60, httponly=True, secure=False
+#             )
+#             response.set_cookie(
+#                 'refresh_token', str(refresh),
+#                 max_age=24 * 60 * 60, httponly=True, secure=False
+#             )
+#             return response
+#
+#         return JsonResponse({"error": "Invalid user credentials"}, status=401)
+#
+#     return JsonResponse({"error": "Invalid request method"}, status=405)
+from datetime import timedelta
 
 @csrf_exempt
 def UserLogin(request):
@@ -2186,13 +2224,19 @@ def UserLogin(request):
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
             })
+
+            # Make the cookies persistent by setting a long max_age (e.g., 30 days)
             response.set_cookie(
                 'access_token', str(refresh.access_token),
-                max_age=15 * 60, httponly=True, secure=False
+                max_age=30 * 24 * 60 * 60,  # 30 days in seconds
+                httponly=True,
+                secure=False  # Use True for production with HTTPS
             )
             response.set_cookie(
                 'refresh_token', str(refresh),
-                max_age=24 * 60 * 60, httponly=True, secure=False
+                max_age=30 * 24 * 60 * 60,  # 30 days in seconds
+                httponly=True,
+                secure=False  # Use True for production with HTTPS
             )
             return response
 
