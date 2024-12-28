@@ -2176,7 +2176,10 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-@csrf_exempt
+
+from django.contrib.auth import authenticate
+
+csrf_exempt
 def UserLogin(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -2192,14 +2195,13 @@ def UserLogin(request):
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
             })
-            # Set cookies with SameSite=None and Secure=True
             response.set_cookie(
                 'access_token', str(refresh.access_token),
-                max_age=15 * 60, httponly=True, samesite='None', secure=False
+                max_age=timedelta(minutes=15), httponly=True, samesite='Lax'
             )
             response.set_cookie(
                 'refresh_token', str(refresh),
-                max_age=24 * 60 * 60, httponly=True, samesite='None', secure=False
+                max_age=timedelta(days=1), httponly=True, samesite='Lax'
             )
             return response
 
