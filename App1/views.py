@@ -2128,41 +2128,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.contrib.auth import authenticate
 
-# @csrf_exempt
-# def UserLogin(request):
-#     if request.method == 'POST':
-#         username = request.POST.get('username')
-#         password = request.POST.get('password')
-#
-#         user = authenticate(username=username, password=password)
-#
-#         if user and not user.is_superuser:
-#             # Generate JWT tokens
-#             refresh = RefreshToken.for_user(user)
-#             response = JsonResponse({
-#                 "message": "User login successful",
-#                 "access_token": str(refresh.access_token),
-#                 "refresh_token": str(refresh)
-#             })
-#             # Set cookies with SameSite=None and Secure=True
-#             response.set_cookie(
-#                 'access_token', str(refresh.access_token),
-#                 max_age=15 * 60, httponly=True, samesite='None', secure=False
-#             )
-#             response.set_cookie(
-#                 'refresh_token', str(refresh),
-#                 max_age=24 * 60 * 60, httponly=True, samesite='None', secure=False
-#             )
-#             return response
-#
-#         return JsonResponse({"error": "Invalid user credentials"}, status=401)
-#
-#     return JsonResponse({"error": "Invalid request method"}, status=405)
-
 
 
 import json
-#
+
+from datetime import timedelta
+
 # @csrf_exempt
 # def UserLogin(request):
 #     if request.method == 'POST':
@@ -2186,20 +2157,33 @@ import json
 #                 "access_token": str(refresh.access_token),
 #                 "refresh_token": str(refresh)
 #             })
+#
+#             # Make the cookies persistent by setting a long max_age (e.g., 30 days)
 #             response.set_cookie(
 #                 'access_token', str(refresh.access_token),
-#                 max_age=15 * 60, httponly=True, secure=False
+#                 max_age=30 * 24 * 60 * 60,  # 30 days in seconds
+#                 httponly=True,
+#                 secure=False  # Use True for production with HTTPS
 #             )
 #             response.set_cookie(
 #                 'refresh_token', str(refresh),
-#                 max_age=24 * 60 * 60, httponly=True, secure=False
+#                 max_age=30 * 24 * 60 * 60,  # 30 days in seconds
+#                 httponly=True,
+#                 secure=False  # Use True for production with HTTPS
 #             )
 #             return response
 #
 #         return JsonResponse({"error": "Invalid user credentials"}, status=401)
 #
 #     return JsonResponse({"error": "Invalid request method"}, status=405)
-from datetime import timedelta
+
+
+
+from datetime import datetime, timedelta
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
 
 @csrf_exempt
 def UserLogin(request):
@@ -2219,22 +2203,28 @@ def UserLogin(request):
 
         if user and not user.is_superuser:
             refresh = RefreshToken.for_user(user)
+
+            # Calculate expiration date for cookies
+            expires_date = datetime.utcnow() + timedelta(days=30)
+
             response = JsonResponse({
                 "message": "User login successful",
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
             })
 
-            # Make the cookies persistent by setting a long max_age (e.g., 30 days)
+            # Set persistent cookies with max_age and expires
             response.set_cookie(
                 'access_token', str(refresh.access_token),
                 max_age=30 * 24 * 60 * 60,  # 30 days in seconds
+                expires=expires_date.strftime("%a, %d-%b-%Y %H:%M:%S GMT"),
                 httponly=True,
                 secure=False  # Use True for production with HTTPS
             )
             response.set_cookie(
                 'refresh_token', str(refresh),
-                max_age=30 * 24 * 60 * 60,  # 30 days in seconds
+                max_age=30 * 24 * 60 * 60,
+                expires=expires_date.strftime("%a, %d-%b-%Y %H:%M:%S GMT"),
                 httponly=True,
                 secure=False  # Use True for production with HTTPS
             )
@@ -2243,7 +2233,6 @@ def UserLogin(request):
         return JsonResponse({"error": "Invalid user credentials"}, status=401)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
-
 
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
