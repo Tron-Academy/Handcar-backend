@@ -115,7 +115,7 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_COOKIE': 'access_token',                    # Name of the access token cookie
     'AUTH_COOKIE_REFRESH': 'refresh_token',           # Name of the refresh token cookie
-    'AUTH_COOKIE_SECURE': False,                      # Set to True in production
+    'AUTH_COOKIE_SECURE': True,                      # Set to True in production
     'AUTH_COOKIE_HTTP_ONLY': True,                    # Cookie is HTTP only
     'AUTH_COOKIE_PATH': '/',                          # Cookie path
     'AUTH_COOKIE_SAMESITE': 'None',                  # Adjust based on your needs (None, Lax, Strict)
@@ -258,3 +258,5 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     "http://localhost:3000",
 ]
+
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
