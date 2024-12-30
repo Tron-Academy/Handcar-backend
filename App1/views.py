@@ -2214,21 +2214,35 @@ def UserLogin(request):
             })
 
             # Set persistent cookies with max_age and expires
+            # response.set_cookie(
+            #     'access_token', str(refresh.access_token),
+            #     max_age=30 * 24 * 60 * 60,  # 30 days in seconds
+            #     expires=expires_date.strftime("%a, %d-%b-%Y %H:%M:%S GMT"),
+            #     httponly=True,
+            #     secure=False,  # Use True for production with HTTPS
+            #     samesite = None
+            # )
+            # response.set_cookie(
+            #     'refresh_token', str(refresh),
+            #     max_age=30 * 24 * 60 * 60,
+            #     expires=expires_date.strftime("%a, %d-%b-%Y %H:%M:%S GMT"),
+            #     httponly=True,
+            #     secure=False,  # Use True for production with HTTPS
+            #     samesite=None
+            # )
             response.set_cookie(
                 'access_token', str(refresh.access_token),
-                max_age=30 * 24 * 60 * 60,  # 30 days in seconds
-                expires=expires_date.strftime("%a, %d-%b-%Y %H:%M:%S GMT"),
+                max_age=30 * 24 * 60 * 60,
                 httponly=True,
-                secure=False,  # Use True for production with HTTPS
-                samesite = None
+                secure=not settings.DEBUG,  # True for production (HTTPS)
+                samesite='None' if not settings.DEBUG else 'Lax'  # Allow cross-origin cookies
             )
             response.set_cookie(
                 'refresh_token', str(refresh),
                 max_age=30 * 24 * 60 * 60,
-                expires=expires_date.strftime("%a, %d-%b-%Y %H:%M:%S GMT"),
                 httponly=True,
-                secure=False,  # Use True for production with HTTPS
-                samesite=None
+                secure=not settings.DEBUG,  # True for production (HTTPS)
+                samesite='None' if not settings.DEBUG else 'Lax'
             )
             return response
 
