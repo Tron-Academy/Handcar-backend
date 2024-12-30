@@ -2235,14 +2235,14 @@ def UserLogin(request):
                 max_age=30 * 24 * 60 * 60,
                 httponly=True,
                 secure=not settings.DEBUG,  # True for production (HTTPS)
-                samesite='None' if not settings.DEBUG else 'Lax'  # Allow cross-origin cookies
+                samesite='None' # Allow cross-origin cookies
             )
             response.set_cookie(
                 'refresh_token', str(refresh),
                 max_age=30 * 24 * 60 * 60,
                 httponly=True,
                 secure=not settings.DEBUG,  # True for production (HTTPS)
-                samesite='None' if not settings.DEBUG else 'Lax'
+                samesite='None'
             )
             return response
 
