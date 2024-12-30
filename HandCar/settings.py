@@ -118,7 +118,7 @@ SIMPLE_JWT = {
     'AUTH_COOKIE_SECURE': False,                      # Set to True in production
     'AUTH_COOKIE_HTTP_ONLY': True,                    # Cookie is HTTP only
     'AUTH_COOKIE_PATH': '/',                          # Cookie path
-                                   # Adjust based on your needs (None, Lax, Strict)
+    'AUTH_COOKIE_SAMESITE': 'None',                  # Adjust based on your needs (None, Lax, Strict)
     'AUTH_COOKIE_EXPIRES': timedelta(days=30),        # Set cookie expiration to 30 days
 }
 
@@ -256,4 +256,5 @@ DEFAULT_FROM_EMAIL = 'parvathynair186@gmail.com'  # Default sender email
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
+    "http://localhost:3000",
 ]

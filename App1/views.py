@@ -2219,14 +2219,16 @@ def UserLogin(request):
                 max_age=30 * 24 * 60 * 60,  # 30 days in seconds
                 expires=expires_date.strftime("%a, %d-%b-%Y %H:%M:%S GMT"),
                 httponly=True,
-                secure=False  # Use True for production with HTTPS
+                secure=False,  # Use True for production with HTTPS
+                samesite = None
             )
             response.set_cookie(
                 'refresh_token', str(refresh),
                 max_age=30 * 24 * 60 * 60,
                 expires=expires_date.strftime("%a, %d-%b-%Y %H:%M:%S GMT"),
                 httponly=True,
-                secure=False  # Use True for production with HTTPS
+                secure=False,  # Use True for production with HTTPS
+                samesite=None
             )
             return response
 
