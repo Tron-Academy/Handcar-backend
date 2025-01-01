@@ -165,52 +165,6 @@ def view_products(request):
         return JsonResponse({"product": data}, safe=False)
 
 
-# @csrf_exempt
-# @login_required
-# def add_to_cart(request, product_id):
-#     if request.method == 'POST':
-#         product = get_object_or_404(Product, id=product_id)
-#         cart_item, created = CartItem.objects.get_or_create(user=request.user, product=product)
-#
-#         if not created:
-#             # If the item is already in the cart, increase the quantity
-#             cart_item.quantity += 1
-#             cart_item.save()
-#
-#         return JsonResponse({'message': 'Product added to cart', 'cart_quantity': cart_item.quantity})
-#
-#     return JsonResponse({'error': 'Invalid request'}, status=400)
-
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework.exceptions import AuthenticationFailed
-from django.shortcuts import get_object_or_404
-from .models import Product, CartItem
-
-# @csrf_exempt
-# def add_to_cart(request, product_id):
-#     # Authenticate the user
-#     authenticator = JWTAuthentication()
-#     try:
-#         user, token = authenticator.authenticate(request)
-#         if not user or not user.is_authenticated:
-#             raise AuthenticationFailed("Authentication required")
-#     except AuthenticationFailed as e:
-#         return JsonResponse({'error': str(e)}, status=401)
-#
-#     if request.method == 'POST':
-#         product = get_object_or_404(Product, id=product_id)
-#         cart_item, created = CartItem.objects.get_or_create(user=user, product=product)
-#
-#         if not created:
-#             # If the item is already in the cart, increase the quantity
-#             cart_item.quantity += 1
-#             cart_item.save()
-#
-#         return JsonResponse({'message': 'Product added to cart', 'cart_quantity': cart_item.quantity})
-#
-#     return JsonResponse({'error': 'Invalid request'}, status=400)
 # Custom JWT Authentication to handle token from HttpOnly cookies
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -484,12 +438,44 @@ def subscribe(request):
 
     logger.warning("Invalid request method")
     return HttpResponseBadRequest("Invalid request method.")
+#
+# @csrf_exempt
+# def display_cart(request):
+#     if request.user.is_authenticated:
+#         # Get all cart items for the logged-in user
+#         cart_items = CartItem.objects.filter(user=request.user)
+#
+#         # Prepare cart items data for JSON response
+#         cart_data = []
+#         for item in cart_items:
+#             cart_data.append({
+#                 'product_name': item.product.name,
+#                 'product_price': item.product.price,
+#                 'quantity': item.quantity,
+#                 'total_price': item.product.price * item.quantity,
+#             })
+#
+#         # Calculate total price for the cart
+#         total_price = sum(item['total_price'] for item in cart_data)
+#
+#         # Return JSON response with cart items and total price
+#         return JsonResponse({
+#             'cart_items': cart_data,
+#             'total_price': total_price
+#         })
+#
+#     return JsonResponse({'error': 'User not authenticated'}, status=401)
+class DisplayCartView(APIView):
+    # Specify authentication and permission classes
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
-@csrf_exempt
-def display_cart(request):
-    if request.user.is_authenticated:
+    def get(self, request):
+        # The user is already authenticated via CustomJWTAuthentication
+        user = request.user
+
         # Get all cart items for the logged-in user
-        cart_items = CartItem.objects.filter(user=request.user)
+        cart_items = CartItem.objects.filter(user=user)
 
         # Prepare cart items data for JSON response
         cart_data = []
@@ -504,14 +490,11 @@ def display_cart(request):
         # Calculate total price for the cart
         total_price = sum(item['total_price'] for item in cart_data)
 
-        # Return JSON response with cart items and total price
-        return JsonResponse({
+        # Return response with cart items and total price
+        return Response({
             'cart_items': cart_data,
             'total_price': total_price
         })
-
-    return JsonResponse({'error': 'User not authenticated'}, status=401)
-
 
 def remove_cart_item(request, item_id):
     if request.user.is_authenticated:

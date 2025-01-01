@@ -2,7 +2,7 @@
 from django.urls import path
 from . import views  # Make sure to import views from the correct app
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import AddToCartView
+from .views import AddToCartView, DisplayCartView
 
 urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
@@ -18,7 +18,8 @@ urlpatterns = [
     path('subscribe/', views.subscribe, name='subscribe'),
     # path('add_to_cart/<int:product_id>/', views.add_to_cart, name='add_to_cart'),
     path('add_to_cart/<int:product_id>/', AddToCartView.as_view(), name='add_to_cart'),
-    path('viewcartitems/', views.display_cart, name='display_cart'),
+    path('display_cart', DisplayCartView.as_view(), name='display_cart'),
+    # path('viewcartitems/', views.display_cart, name='display_cart'),
     path('removecart/', views.remove_cart_item, name='remove_cart_item'),
     path('add_review/<int:product_id>/', views.add_review, name= 'add_review'),
     path('add_category', views.add_category, name='add_category'),
