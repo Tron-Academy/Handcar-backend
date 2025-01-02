@@ -438,7 +438,7 @@ def subscribe(request):
 
     logger.warning("Invalid request method")
     return HttpResponseBadRequest("Invalid request method.")
-#
+
 # @csrf_exempt
 # def display_cart(request):
 #     if request.user.is_authenticated:
@@ -465,6 +465,9 @@ def subscribe(request):
 #         })
 #
 #     return JsonResponse({'error': 'User not authenticated'}, status=401)
+
+
+
 class DisplayCartView(APIView):
     # Specify authentication and permission classes
     authentication_classes = [CustomJWTAuthentication]
@@ -1931,7 +1934,7 @@ def view_services(request):
             {
                 'service_name' : data.Service_name,
                 'service_category': data.Service_category,
-                'service_details': data.Service_category,
+                'service_details': data.service_details,
                 'rate': data.Rate,
                 'image': data.Image
             }
@@ -2246,23 +2249,6 @@ def UserLogin(request):
                 "refresh_token": str(refresh)
             })
 
-            # Set persistent cookies with max_age and expires
-            # response.set_cookie(
-            #     'access_token', str(refresh.access_token),
-            #     max_age=30 * 24 * 60 * 60,  # 30 days in seconds
-            #     expires=expires_date.strftime("%a, %d-%b-%Y %H:%M:%S GMT"),
-            #     httponly=True,
-            #     secure=False,  # Use True for production with HTTPS
-            #     samesite = None
-            # )
-            # response.set_cookie(
-            #     'refresh_token', str(refresh),
-            #     max_age=30 * 24 * 60 * 60,
-            #     expires=expires_date.strftime("%a, %d-%b-%Y %H:%M:%S GMT"),
-            #     httponly=True,
-            #     secure=False,  # Use True for production with HTTPS
-            #     samesite=None
-            # )
             response.set_cookie(
                 'access_token', str(refresh.access_token),
                 max_age=30 * 24 * 60 * 60,

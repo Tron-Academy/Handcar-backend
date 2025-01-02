@@ -3,7 +3,6 @@ from django.urls import path
 from . import views  # Make sure to import views from the correct app
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import AddToCartView, DisplayCartView
-
 urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('signup', views.signup, name='signup'),
