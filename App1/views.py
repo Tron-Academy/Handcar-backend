@@ -141,6 +141,7 @@ def login_with_otp(request):
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+@csrf_exempt
 def view_products(request):
     if request.method == 'GET':
         search_query = request.GET.get('search', '')
@@ -153,9 +154,10 @@ def view_products(request):
             {
                 "id": product.id,
                 "name": product.name,
-                "category": product.category,
-                "brand": product.brand,
+                "category": product.category.name,
+                "brand": product.brand.name,
                 "price": product.price,
+                "stock":product.stock,
                 "image": product.image.url if product.image else None,
                 "description": product.description,
                 "is_bestseller": product.is_bestseller,
