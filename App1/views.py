@@ -494,6 +494,7 @@ class DisplayCartView(APIView):
         })
 
 
+
 class UpdateCartItemView(APIView):
     """
     View to update the quantity of a cart item.
@@ -518,11 +519,52 @@ class UpdateCartItemView(APIView):
 
         return Response({"message": "Cart item updated successfully"}, status=status.HTTP_200_OK)
 
+#
+# def remove_cart_item(request, item_id):
+#     if request.user.is_authenticated:
+#         # Get the cart item based on the ID and user
+#         cart_item = get_object_or_404(CartItem, id=item_id, user=request.user)
+#
+#         # Delete the cart item
+#         cart_item.delete()
+#
+#         # Get all remaining cart items for the logged-in user
+#         cart_items = CartItem.objects.filter(user=request.user)
+#
+#         # Prepare cart items data for JSON response
+#         cart_data = []
+#         for item in cart_items:
+#             cart_data.append({
+#                 'product_name': item.product.name,
+#                 'product_price': item.product.price,
+#                 'quantity': item.quantity,
+#                 'total_price': item.product.price * item.quantity,
+#             })
+#
+#         # Calculate total price for the cart after removal
+#         total_price = sum(item['total_price'] for item in cart_data)
+#
+#         # Return updated cart data
+#         return JsonResponse({
+#             'message': 'Item removed successfully',
+#             'cart_items': cart_data,
+#             'total_price': total_price
+#         })
+#
+#     return JsonResponse({'error': 'User not authenticated'}, status=401)
+class RemoveCartItemView(APIView):
+    """
+    View to remove an item from the user's cart.
+    """
+    authentication_classes = [CustomJWTAuthentication]  # Ensure the user is authenticated
+    permission_classes = [IsAuthenticated]  # Only authenticated users can remove cart items
 
-def remove_cart_item(request, item_id):
-    if request.user.is_authenticated:
-        # Get the cart item based on the ID and user
-        cart_item = get_object_or_404(CartItem, id=item_id, user=request.user)
+    def delete(self, request, item_id):
+        try:
+            # Get the cart item based on the ID and user
+            cart_item = CartItem.objects.get(id=item_id, user=request.user)
+        except CartItem.DoesNotExist:
+            return Response({"error": "Cart item not found"}, status=status.HTTP_404_NOT_FOUND)
 
         # Delete the cart item
         cart_item.delete()
@@ -544,14 +586,11 @@ def remove_cart_item(request, item_id):
         total_price = sum(item['total_price'] for item in cart_data)
 
         # Return updated cart data
-        return JsonResponse({
+        return Response({
             'message': 'Item removed successfully',
             'cart_items': cart_data,
             'total_price': total_price
         })
-
-    return JsonResponse({'error': 'User not authenticated'}, status=401)
-
 
 @csrf_exempt
 @login_required
@@ -930,6 +969,7 @@ def edit_product(request, product_id):
             "category_name": product.category.name if product.category else None,
             "brand_name": product.brand.name if product.brand else None,
             "price": product.price,
+            "stock": product.stock,
             "description": product.description,
             "is_bestseller": product.is_bestseller,
             "discount_percentage": product.discount_percentage,
@@ -954,6 +994,7 @@ def edit_product(request, product_id):
             category_name = request.POST.get('category_name', product.category.name if product.category else '')
             brand_name = request.POST.get('brand_name', product.brand.name if product.brand else '')
             price = request.POST.get('price', product.price)
+            stock = request.POST.get('stock', product.stock)
             description = request.POST.get('description', product.description)
             is_bestseller = request.POST.get('is_bestseller', product.is_bestseller)
             discount_percentage = request.POST.get('discount_percentage', product.discount_percentage)
@@ -980,6 +1021,7 @@ def edit_product(request, product_id):
             product.category = category
             product.brand = brand
             product.price = price
+            product.stock = stock
             product.description = description
             product.is_bestseller = is_bestseller
             product.discount_percentage = discount_percentage
@@ -996,6 +1038,7 @@ def edit_product(request, product_id):
                     "category": product.category.name,
                     "brand": product.brand.name,
                     "price": str(product.price),
+                    "stock":product.stock,
                     "description": product.description,
                     "is_bestseller": product.is_bestseller,
                     "discount_percentage": product.discount_percentage,
