@@ -493,6 +493,32 @@ class DisplayCartView(APIView):
             'total_price': total_price
         })
 
+
+class UpdateCartItemView(APIView):
+    """
+    View to update the quantity of a cart item.
+    """
+    authentication_classes = [CustomJWTAuthentication]  # Add your authentication class here
+    permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
+
+    def put(self, request, cart_item_id):
+        try:
+            cart_item = CartItem.objects.get(id=cart_item_id, user=request.user)
+        except CartItem.DoesNotExist:
+            return Response({"error": "Cart item not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # Validate the new quantity
+        new_quantity = request.data.get('quantity')
+        if new_quantity is None or new_quantity <= 0:
+            return Response({"error": "Invalid quantity"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update the quantity
+        cart_item.quantity = new_quantity
+        cart_item.save()
+
+        return Response({"message": "Cart item updated successfully"}, status=status.HTTP_200_OK)
+
+
 def remove_cart_item(request, item_id):
     if request.user.is_authenticated:
         # Get the cart item based on the ID and user
