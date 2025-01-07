@@ -783,6 +783,7 @@ def add_product(request):
             brand_name = request.POST.get('brand_name')        # Use name instead of ID
             price = request.POST.get('price')
             description = request.POST.get('description', '')
+            stock = request.POST. get('stock')
             is_bestseller = request.POST.get('is_bestseller', False)
             discount_percentage = request.POST.get('discount_percentage', 0)
 
@@ -810,6 +811,7 @@ def add_product(request):
                 brand=brand,
                 price=price,
                 description=description,
+                stock=stock,
                 is_bestseller=is_bestseller,
                 discount_percentage=discount_percentage,
                 image=image_url  # Save the Cloudinary image URL
@@ -824,6 +826,7 @@ def add_product(request):
                     "brand": product.brand.name,
                     "price": str(product.price),
                     "description": product.description,
+                    "stock": product.stock,
                     "is_bestseller": product.is_bestseller,
                     "discount_percentage": product.discount_percentage,
                     "image": product.image,  # Return Cloudinary image URL
@@ -2274,38 +2277,6 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from .models import Vendor
 
-# @csrf_exempt
-# def VendorLogin(request):
-#     if request.method == 'POST':
-#         phone_number = request.POST.get('phone_number')
-#         password = request.POST.get('password')
-#
-#         # Debugging: print the phone number and password to check what's being received
-#         print("Received phone number:", phone_number)
-#         print("Received password:", password)
-#
-#         try:
-#             vendor = Vendor.objects.get(phone_number=phone_number)
-#             # Debugging: print the vendor object to see if it's being retrieved
-#             print("Vendor found:", vendor)
-#
-#             # Directly compare the entered password with the stored password
-#             if password == vendor.password:
-#                 # You need to create a custom token for the vendor
-#                 refresh = RefreshToken()
-#                 refresh['vendor_id'] = vendor.id  # Store vendor-specific info in the token
-
-#                 return JsonResponse({
-#                     "message": "Vendor login successful",
-#                     "access_token": str(refresh.access_token),
-#                     "refresh_token": str(refresh)
-#                 })
-#             else:
-#                 return JsonResponse({"error": "Invalid password"}, status=401)
-#         except Vendor.DoesNotExist:
-#             return JsonResponse({"error": "Vendor not found"}, status=404)
-#
-#     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 @csrf_exempt
 def VendorLogin(request):
@@ -2333,11 +2304,17 @@ def VendorLogin(request):
                 # Set tokens in secure cookies
                 response.set_cookie(
                     'access_token', str(refresh.access_token),
-                    max_age=timedelta(minutes=15), httponly=True
+                    max_age=30 * 24 * 60 * 60,
+                    httponly=True,
+                    secure=True,  # True for production (HTTPS)
+                    samesite='None'  # Allow cross-origin cookies
                 )
                 response.set_cookie(
                     'refresh_token', str(refresh),
-                    max_age=timedelta(days=1), httponly=True
+                    max_age=30 * 24 * 60 * 60,
+                    httponly=True,
+                    secure=True,  # True for production (HTTPS)
+                    samesite='None'
                 )
                 return response
 

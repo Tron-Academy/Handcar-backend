@@ -1,23 +1,18 @@
+# models.py
+from django.core.validators import RegexValidator
+from django.db import models
+from django.contrib.auth.hashers import make_password
+
 # serializers.py
 from datetime import timedelta, date
 from email.policy import default
-
 from django.contrib.auth.models import User
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
-from django.utils.timezone import now
-
 from rest_framework import serializers
 from django.utils import timezone
-# models.py
-from django.db import models
-
-
 
 
 class Category(models.Model):
     name = models.CharField(max_length=255)
-
 
     def __str__(self):
         return self.name
@@ -25,7 +20,6 @@ class Category(models.Model):
 class Brand(models.Model):
     name = models.CharField(max_length=255)
     promoted =models.BooleanField(default=False)
-
 
     def __str__(self):
         return self.name
@@ -37,6 +31,7 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     image = models.URLField(max_length=2000, blank=True, null=True)  # Use URLField for Cloudinary URLs
     description = models.TextField(blank=True)
+    stock = models.IntegerField(default=0)
     is_bestseller = models.BooleanField(default=False)
     discount_percentage = models.IntegerField(default=0)
     created_at = models.DateTimeField(default=timezone.now)
@@ -50,17 +45,6 @@ class Product(models.Model):
         return 0
 
 
-class Review(models.Model):
-    product = models.ForeignKey(Product, related_name='reviews', on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    rating = models.PositiveSmallIntegerField(default=0)  # Rating from 1 to 5
-    comment = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('product', 'user')
-    def __str__(self):
-        return self.name
 
     @property
     def discounted_price(self):
@@ -148,6 +132,7 @@ class Review(models.Model):
         return f"Review by {self.user.username} on {self.product.name} - Rating: {self.rating}"
 
 
+
 class Address(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="addresses")
     street = models.CharField(max_length=255)
@@ -160,42 +145,7 @@ class Address(models.Model):
     def __str__(self):
         return f"{self.street}, {self.city}, {self.state}, {self.zip_code}, {self.country}"
 
-#
-# class Vendor(models.Model):
-#     vendor_name = models.CharField(max_length=255)
-#     phone_number = models.CharField(max_length=15, unique=True)  # Assuming a phone number format
-#     email = models.EmailField(unique=True)
-#     password = models.CharField(max_length=255)  # Should be hashed in production
-#     location = models.TextField(blank=True, null=True)  # Allow location to be added later
-#     whatsapp_number = models.CharField(max_length=15, blank=True, null=True)  # Optional, can be added later
-#     updated_at = models.DateTimeField(auto_now=True)  # Track when the vendor was last updated
-#
-#     def __str__(self):
-#         return self.vendor_name
 
-from django.contrib.auth.models import User
-from django.contrib.auth.hashers import make_password
-from django.core.validators import RegexValidator
-from django.db import models
-#
-# class Vendor(models.Model):
-#     vendor_name = models.CharField(max_length=255)
-#     phone_number = models.CharField(
-#         max_length=15,
-#         unique=True,
-#         validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Enter a valid phone number.")]
-#     )
-#     email = models.EmailField(unique=True)
-#     password = models.CharField(max_length=255)
-#     Address = models.TextField(blank=True, null=True)
-#     whatsapp_number = models.CharField(max_length=15, blank=True, null=True)
-#     models.DateTimeField(default=now)
-#     updated_at = models.DateTimeField(auto_now=True)
-#
-#
-#
-#     def __str__(self):
-#         return self.vendor_name
 
 
 
@@ -226,24 +176,7 @@ class Plan(models.Model):
         return self.name
 
 
-# class Subscriber(models.Model):
-#     email = models.EmailField()
-#     Address = models.TextField(blank=True)
-#     service_type = models.CharField(max_length=100)
-#     plan = models.CharField(max_length=100)
-#     duration = models.IntegerField(help_text="Duration in months")
-#     start_date = models.DateField()
-#     end_date = models.DateField(blank=True, null=True, help_text="Calculated based on duration and start_date")
-#     assigned_vendor = models.CharField(max_length=100, help_text="Name of the assigned vendor", blank=True, null=True)
-#
-#     def save(self, *args, **kwargs):
-#         # Automatically calculate the end_date based on start_date and duration
-#         if self.start_date and self.duration:
-#             self.end_date = self.start_date + timedelta(days=self.duration * 30)  # Approximation: 30 days per month
-#         super().save(*args, **kwargs)
-#
-#     def __str__(self):
-#         return self.email
+
 
 
 
@@ -281,10 +214,15 @@ class Vendor(models.Model):
         unique=True,
         validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Enter a valid phone number.")]
     )
+    whatsapp_number = models.CharField(
+        null = True,
+        max_length=15,
+        unique=True,
+        validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Enter a valid whatsapp number.")]
+    )
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=255)
     address = models.TextField(blank=True, null=True)
-    whatsapp_number = models.CharField(max_length=15, blank=True, null=True)
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
