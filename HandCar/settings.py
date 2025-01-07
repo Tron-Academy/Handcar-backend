@@ -169,16 +169,28 @@ WSGI_APPLICATION = 'HandCar.wsgi.application'
 #
 # }
 
+# import dj_database_url
+# from decouple import config
+# DATABASES = {
+#     'default': dj_database_url.config(
+#         default=config('DATABASE_URL')  # DATABASE_URL environment variable
+#     )
+# }
+#
+# print(config('DATABASE_URL'))  # Check if it prints the correct value
 import dj_database_url
 from decouple import config
+
+# Add error handling and default value
+DATABASE_URL = config('DATABASE_URL', default=None)
+if not DATABASE_URL:
+    raise ValueError("No DATABASE_URL set in environment")
+
+print(f"Attempting to connect to: {DATABASE_URL}")  # Debug print
+
 DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL')  # DATABASE_URL environment variable
-    )
+    'default': dj_database_url.parse(DATABASE_URL)
 }
-
-print(config('DATABASE_URL'))  # Check if it prints the correct value
-
 
 
 
