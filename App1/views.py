@@ -827,26 +827,26 @@ def add_product(request):
 
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
 
-
-@csrf_exempt
-def view_products(request):
-    if request.method == 'GET':
-        search_query = request.GET.get('search', '')
-        if search_query:
-            products = Product.objects.filter(name__icontains=search_query)
-        else:
-            products = Product.objects.all()
-        data = [{"id": product.id,
-                 "name": product.name,
-                 "category": product.category.name,
-                 "brand": product.brand.name,
-                 "price": product.price,
-                 "image": product.image,
-                 "description": product.description,
-                 "discount_percentage": product.discount_percentage} for product in products]
-        return JsonResponse({"product": data}, safe=False)
-    
-    
+#
+# @csrf_exempt
+# def view_products(request):
+#     if request.method == 'GET':
+#         search_query = request.GET.get('search', '')
+#         if search_query:
+#             products = Product.objects.filter(name__icontains=search_query)
+#         else:
+#             products = Product.objects.all()
+#         data = [{"id": product.id,
+#                  "name": product.name,
+#                  "category": product.category.name,
+#                  "brand": product.brand.name,
+#                  "price": product.price,
+#                  "image": product.image,
+#                  "description": product.description,
+#                  "discount_percentage": product.discount_percentage} for product in products]
+#         return JsonResponse({"product": data}, safe=False)
+#
+#
 
 
 # def edit_product(request, product_id):
