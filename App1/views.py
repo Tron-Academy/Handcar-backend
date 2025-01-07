@@ -173,18 +173,6 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Product, CartItem
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-
-
-# class CustomJWTAuthentication(JWTAuthentication):
-#     def authenticate(self, request):
-#         # Retrieve the token from the cookie using the name specified in settings.py
-#         token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE'])
-#         if not token:
-#             raise AuthenticationFailed('Authentication token not found in cookies')
-#
-#         # Use the standard JWTAuthentication method to decode and authenticate the token
-#         return self.authenticate_credentials(token)
-
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 import jwt
