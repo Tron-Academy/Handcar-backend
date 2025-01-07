@@ -158,13 +158,15 @@ def view_products(request):
                 "brand": product.brand.name,
                 "price": product.price,
                 "stock":product.stock,
-                "image": product.image.url if product.image else None,
+                # "image": product.image.url if product.image else None,
+                "image": product.image if product.image else None,
                 "description": product.description,
                 "is_bestseller": product.is_bestseller,
             }
             for product in products
         ]
         return JsonResponse({"product": data}, safe=False)
+    return JsonResponse({'Error':'Invalid request method'})
 
 
 # Custom JWT Authentication to handle token from HttpOnly cookies
