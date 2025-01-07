@@ -476,6 +476,8 @@ class DisplayCartView(APIView):
         cart_data = []
         for item in cart_items:
             cart_data.append({
+                'product_id': item.product.id,
+                'product_image': item.product.image,
                 'product_name': item.product.name,
                 'product_price': item.product.price,
                 'quantity': item.quantity,
