@@ -563,6 +563,7 @@ class RemoveCartItemView(APIView):
 
     def delete(self, request, item_id):
         try:
+            item_id = int(item_id)
             # Get the cart item based on the ID and user
             cart_item = CartItem.objects.get(id=item_id, user=request.user)
         except CartItem.DoesNotExist:
