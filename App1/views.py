@@ -505,6 +505,7 @@ class UpdateCartItemView(APIView):
     def put(self, request, cart_item_id):
         try:
             cart_item = CartItem.objects.get(id=cart_item_id, user=request.user)
+
         except CartItem.DoesNotExist:
             return Response({"error": "Cart item not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -552,6 +553,7 @@ class UpdateCartItemView(APIView):
 #         })
 #
 #     return JsonResponse({'error': 'User not authenticated'}, status=401)
+
 class RemoveCartItemView(APIView):
     """
     View to remove an item from the user's cart.
