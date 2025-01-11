@@ -2641,6 +2641,26 @@ def add_service_category(request):
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
 
 
+def view_service_categories_user(request):
+    try:
+        # Retrieve all service categories from the database
+        categories = ServiceCategory.objects.all()
+
+        # Prepare the list of categories to return as JSON
+        categories_data = []
+        for category in categories:
+            categories_data.append({
+                "id": category.id,
+                "name": category.name
+            })
+
+        # Return the categories data as JSON
+        return JsonResponse({"service_categories": categories_data}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
 @csrf_exempt
 def view_service_user(request):
     try:
