@@ -207,12 +207,21 @@ class Subscriber(models.Model):
         super().save(*args, **kwargs)
 
 
-class Vendor(models.Model):
-    vendor_name = models.CharField(max_length=255)
+
+class ServiceCategory(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Services(models.Model):
+    vendor_name = models.CharField(max_length=255,null=True, blank=True)
     phone_number = models.CharField(
         max_length=15,
         unique=True,
-        validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Enter a valid phone number.")]
+        validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Enter a valid phone number.")],
+        null = True, blank = True
     )
     whatsapp_number = models.CharField(
         null = True,
@@ -220,11 +229,15 @@ class Vendor(models.Model):
         unique=True,
         validators=[RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Enter a valid whatsapp number.")]
     )
-    email = models.EmailField(unique=True)
-    password = models.CharField(max_length=255)
+    email = models.EmailField(unique=True, null=True, blank=True)
+    password = models.CharField(max_length=255, null=True, blank=True)
     address = models.TextField(blank=True, null=True)
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
+    service_category = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE,null=True)
+    service_details = models.TextField(null=True)
+    rate = models.IntegerField(null=True)
+    image = models.URLField(max_length=2000, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -236,9 +249,18 @@ class Vendor(models.Model):
         super().save(*args, **kwargs)
 
 
-class Services(models.Model):
-    Service_name = models.CharField(max_length=2000)
-    Service_category = models.CharField(max_length=2000)
-    Service_details = models.TextField()
-    Rate = models.IntegerField()
-    Image = models.URLField(max_length=2000, blank=True, null=True)
+class ServiceImage(models.Model):
+    service = models.ForeignKey('Services', on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='service_images/')  # Stores the image in the 'service_images' directory
+    uploaded_at = models.DateTimeField(auto_now_add=True)  # Tracks when the image was uploaded
+
+    def __str__(self):
+        return f"Image for {self.service.service_name}"
+
+
+# class Services(models.Model):
+#     Service_name = models.CharField(max_length=2000)
+#     Service_category = models.CharField(max_length=2000)
+#     Service_details = models.TextField()
+#     Rate = models.IntegerField()
+#     Image = models.URLField(max_length=2000, blank=True, null=True)

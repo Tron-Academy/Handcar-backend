@@ -47,10 +47,10 @@ def get_geocoded_location(address):
 
 def get_nearby_vendors(subscriber_lat, subscriber_lon):
     # Import inside the function to avoid circular import
-    from .models import Vendor  # Move this import inside the function
+    from .models import Services  # Move this import inside the function
 
     # Get vendors from the database and calculate distance
-    vendors = Vendor.objects.all()
+    vendors = Services.objects.all()
     nearby_vendors = []
 
     for vendor in vendors:

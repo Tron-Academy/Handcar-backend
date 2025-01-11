@@ -13,7 +13,8 @@ from rest_framework.views import APIView
 from twilio.rest import Client
 import random
 from django.core.cache import cache
-from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand,Vendor, Coupon, Plan, Subscriber, Subscription,Services
+from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand, Coupon, Plan, Subscriber, \
+    Subscription, Services, ServiceCategory, ServiceImage
 from .utils import geocode_address
 
 
@@ -1098,7 +1099,7 @@ def delete_product(request, product_id):
 
 
 @csrf_exempt
-def add_vendor(request):
+def add_vendor_by_admin(request):
     if request.method == 'POST':
         try:
             # Parse JSON data from the request body
@@ -1120,11 +1121,11 @@ def add_vendor(request):
                 return JsonResponse({"error": "Invalid email format."}, status=400)
 
             # Check if email already exists
-            if Vendor.objects.filter(email=email).exists():
+            if Services.objects.filter(email=email).exists():
                 return JsonResponse({"error": "Email already exists."}, status=400)
 
             # Create the vendor
-            vendor = Vendor.objects.create(
+            vendor = Services.objects.create(
                 vendor_name=vendor_name,
                 phone_number=phone_number,
                 email=email,
@@ -1132,8 +1133,8 @@ def add_vendor(request):
             )
 
             return JsonResponse({
-                "message": "Vendor added successfully.",
-                "vendor": {
+                "message": "Service Vendor added successfully.",
+                "Service": {
                     "id": vendor.id,
                     "vendor_name": vendor.vendor_name,
                     "phone_number": vendor.phone_number,
@@ -1149,20 +1150,6 @@ def add_vendor(request):
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
 
 
-# @csrf_exempt
-# def view_vendors(request):
-#     if request.method == 'GET':
-#         search_query = request.GET.get('search', '')
-#         if search_query:
-#             vendors = Vendor.objects.filter(name__icontains=search_query)
-#         else:
-#             vendors = Vendor.objects.all()
-#         data = [{"id": vendor.id,
-#                  "name": vendor.vendor_name,
-#                  "price": vendor.phone_number,
-#                  "email": vendor.email} for vendor in vendors]
-#         return JsonResponse({"vendor": data}, safe=False)
-
 
 
 @csrf_exempt
@@ -1171,9 +1158,9 @@ def view_vendors(request):
         search_query = request.GET.get('search', '').strip()
         print("Search Query:", search_query)  # Debugging
         if search_query:
-            vendors = Vendor.objects.filter(vendor_name__icontains=search_query)
+            vendors = Services.objects.filter(vendor_name__icontains=search_query)
         else:
-            vendors = Vendor.objects.all()
+            vendors = Services.objects.all()
         data = [{"id": vendor.id,
                  "name": vendor.vendor_name,
                  "price": vendor.phone_number,
@@ -1186,7 +1173,7 @@ def edit_vendor_profile(request, vendor_id):
     if request.method == 'GET':
         try:
             # Retrieve the vendor
-            vendor = get_object_or_404(Vendor, id=vendor_id)
+            vendor = get_object_or_404(Services, id=vendor_id)
 
             # Return vendor data as JSON
             vendor_data = {
@@ -1196,7 +1183,11 @@ def edit_vendor_profile(request, vendor_id):
                 "whatsapp_number": vendor.whatsapp_number,
                 "address": vendor.address,
                 "latitude": vendor.latitude,
-                "longitude": vendor.longitude
+                "longitude": vendor.longitude,
+                "service_category": vendor.service_category.name,
+                "service_details": vendor.service_details,
+                "rate": vendor.rate,
+                "images": [image.image.url for image in vendor.images.all()]
             }
             return JsonResponse(vendor_data, status=200)
 
@@ -1206,10 +1197,10 @@ def edit_vendor_profile(request, vendor_id):
     elif request.method == 'POST':
         try:
             # Retrieve the vendor to be edited
-            vendor = get_object_or_404(Vendor, id=vendor_id)
+            vendor = get_object_or_404(Services, id=vendor_id)
 
             # Parse JSON data
-            data = json.loads(request.body)
+            data = request.POST
 
             # Update fields if provided
             vendor.vendor_name = data.get('vendor_name', vendor.vendor_name)  # Vendor can edit name
@@ -1226,8 +1217,20 @@ def edit_vendor_profile(request, vendor_id):
                 print(f"New address set: {new_address}")
                 vendor.latitude, vendor.longitude = geocode_address(new_address)
                 print(f"Geocoded latitude: {vendor.latitude}, longitude: {vendor.longitude}")
-
+            vendor.service_details = data.get('service_details', vendor.service_details)
+            vendor.rate = data.get('rate', vendor.rate)
+            service_category_name = data.get('service_category')
+            if service_category_name:
+                service_category = ServiceCategory.objects.filter(name=service_category_name).first()
+                if service_category:
+                    vendor.service_category = service_category
+                else:
+                    return JsonResponse({"error": "Invalid service category name."}, status=400)
             vendor.save()
+            if 'images' in request.FILES:
+                uploaded_images = request.FILES.getlist('images')  # Get the uploaded files
+                for image in uploaded_images:
+                    ServiceImage.objects.create(service=vendor, image=image)  # Save image for the service
 
             return JsonResponse({"message": "Vendor updated successfully."}, status=200)
 
@@ -1242,7 +1245,7 @@ def delete_vendor(request, vendor_id):
     if request.method == 'DELETE':
         try:
             # Retrieve the vendor instance by ID
-            vendors = get_object_or_404(Vendor, id=vendor_id)
+            vendors = get_object_or_404(Services, id=vendor_id)
 
             # Delete the vendor
             vendors.delete()
@@ -1663,7 +1666,7 @@ def remove_promoted_brand(request):
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password, check_password
-from .models import Vendor
+# from .models import Vendor
 import json
 
 @csrf_exempt
@@ -1715,7 +1718,7 @@ from .utils import haversine, geocode_address
 import json
 from datetime import datetime, timedelta
 from django.http import JsonResponse
-from .models import Subscriber, Vendor
+from .models import Subscriber
 from .utils import get_geocoded_location, get_nearby_vendors
 
 # @csrf_exempt
@@ -1788,7 +1791,7 @@ from .utils import get_geocoded_location, get_nearby_vendors
 
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from .models import Vendor  # Import Vendor model to get vendor details
+# from .models import  # Import Vendor model to get vendor details
 
 def send_vendor_notification(vendor_id, message):
     # Send a message to the vendor's group
@@ -2364,7 +2367,7 @@ def UserLogin(request):
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 from django.http import JsonResponse
-from .models import Vendor
+# from .models import Vendor
 
 
 @csrf_exempt
@@ -2375,7 +2378,7 @@ def VendorLogin(request):
 
         try:
             # Retrieve vendor using phone number
-            vendor = Vendor.objects.get(phone_number=phone_number)
+            vendor = Services.objects.get(phone_number=phone_number)
 
             # Check the password against the hashed password
             if password == vendor.password:
@@ -2596,3 +2599,43 @@ def add_product(request):
 
 
 
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+from .models import ServiceCategory
+
+@csrf_exempt
+def add_service_category(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON data from the request body
+            data = json.loads(request.body)
+
+            # Extract the category name
+            name = data.get('name')
+
+            # Validate the category name
+            if not name:
+                return JsonResponse({"error": "The 'name' field is required."}, status=400)
+
+            # Check if the category already exists
+            if ServiceCategory.objects.filter(name=name).exists():
+                return JsonResponse({"error": "Service category already exists."}, status=400)
+
+            # Create the new service category
+            category = ServiceCategory.objects.create(name=name)
+
+            return JsonResponse({
+                "message": "Service category added successfully.",
+                "service_category": {
+                    "id": category.id,
+                    "name": category.name
+                }
+            }, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data."}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
