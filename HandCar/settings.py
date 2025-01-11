@@ -96,8 +96,8 @@ REST_FRAMEWORK = {
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),  # Adjust as needed
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),     # Adjust as needed
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),  # Adjust as needed
+    'REFRESH_TOKEN_LIFETIME': timedelta(weeks=4),     # Adjust as needed
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_COOKIE': 'access_token',                    # Name of the access token cookie
@@ -111,14 +111,6 @@ SIMPLE_JWT = {
 
 
 
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': False,
-    'BLACKLIST_AFTER_ROTATION': True,
-    'AUTH_COOKIE': 'access_token',  # Name of the cookie for access token
-    'AUTH_COOKIE_REFRESH': 'refresh_token',  # Name of the cookie for refresh token
-}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -553,47 +553,70 @@ class UpdateCartItemView(APIView):
 #         })
 #
 #     return JsonResponse({'error': 'User not authenticated'}, status=401)
+#
+# class RemoveCartItemView(APIView):
+#     """
+#     View to remove an item from the user's cart.
+#     """
+#     authentication_classes = [CustomJWTAuthentication]  # Ensure the user is authenticated
+#     permission_classes = [IsAuthenticated]  # Only authenticated users can remove cart items
+#
+#     def delete(self, request, item_id):
+#         try:
+#             item_id = int(item_id)
+#             # Get the cart item based on the ID and user
+#             cart_item = CartItem.objects.get(id=item_id, user=request.user)
+#         except CartItem.DoesNotExist:
+#             return Response({"error": "Cart item not found"}, status=status.HTTP_404_NOT_FOUND)
+#
+#         # Delete the cart item
+#         cart_item.delete()
+#
+#         # Get all remaining cart items for the logged-in user
+#         cart_items = CartItem.objects.filter(user=request.user)
+#
+#         # Prepare cart items data for JSON response
+#         cart_data = []
+#         for item in cart_items:
+#             cart_data.append({
+#                 'product_name': item.product.name,
+#                 'product_price': item.product.price,
+#                 'quantity': item.quantity,
+#                 'total_price': item.product.price * item.quantity,
+#             })
+#
+#         # Calculate total price for the cart after removal
+#         total_price = sum(item['total_price'] for item in cart_data)
+#
+#         # Return updated cart data
+#         return Response({
+#             'message': 'Item removed successfully',
+#             'cart_items': cart_data,
+#             'total_price': total_price
+#         })
+import logging
+logger = logging.getLogger(__name__)
 
 class RemoveCartItemView(APIView):
-    """
-    View to remove an item from the user's cart.
-    """
-    authentication_classes = [CustomJWTAuthentication]  # Ensure the user is authenticated
-    permission_classes = [IsAuthenticated]  # Only authenticated users can remove cart items
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def delete(self, request, item_id):
         try:
+            logger.info(f"Received DELETE request for item_id: {item_id}")
+            logger.info(f"Authenticated user: {request.user}")
+
             item_id = int(item_id)
-            # Get the cart item based on the ID and user
             cart_item = CartItem.objects.get(id=item_id, user=request.user)
+        except ValueError:
+            logger.error(f"Invalid item_id: {item_id}")
+            return Response({"error": "Invalid item ID"}, status=status.HTTP_400_BAD_REQUEST)
         except CartItem.DoesNotExist:
+            logger.error(f"Cart item with id {item_id} not found for user {request.user}")
             return Response({"error": "Cart item not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Delete the cart item
         cart_item.delete()
-
-        # Get all remaining cart items for the logged-in user
-        cart_items = CartItem.objects.filter(user=request.user)
-
-        # Prepare cart items data for JSON response
-        cart_data = []
-        for item in cart_items:
-            cart_data.append({
-                'product_name': item.product.name,
-                'product_price': item.product.price,
-                'quantity': item.quantity,
-                'total_price': item.product.price * item.quantity,
-            })
-
-        # Calculate total price for the cart after removal
-        total_price = sum(item['total_price'] for item in cart_data)
-
-        # Return updated cart data
-        return Response({
-            'message': 'Item removed successfully',
-            'cart_items': cart_data,
-            'total_price': total_price
-        })
+        return Response({"message": "Item removed successfully"})
 
 @csrf_exempt
 @login_required
@@ -2320,14 +2343,14 @@ def UserLogin(request):
 
             response.set_cookie(
                 'access_token', str(refresh.access_token),
-                max_age=30 * 24 * 60 * 60,
+                max_age=60 * 60,
                 httponly=True,
                 secure= True,  # True for production (HTTPS)
                 samesite='None' # Allow cross-origin cookies
             )
             response.set_cookie(
                 'refresh_token', str(refresh),
-                max_age=30 * 24 * 60 * 60,
+                max_age=28 * 24 * 60 * 60,
                 httponly=True,
                 secure= True,  # True for production (HTTPS)
                 samesite='None'
@@ -2530,6 +2553,46 @@ def shipping_address(request):
 
     return JsonResponse({'error': 'Only POST or GET methods are allowed'}, status=405)
 
+
+
+def add_product(request):
+    # Fetch all categories and brands from the database
+    categories = Category.objects.all()  # All category instances
+    brands = Brand.objects.all()         # All brand instances
+
+    # Handle POST request for adding a product
+    if request.method == "POST":
+        # Retrieve form data and process it (e.g., save to the database)
+        name = request.POST.get("name")
+        category_name = request.POST.get("category")
+        brand_name = request.POST.get("brand")
+        # Retrieve the instances for category and brand by name
+        category = Category.objects.get(name=category_name)
+        brand = Brand.objects.get(name=brand_name)
+        price = request.POST.get("price")
+        description = request.POST.get("description")
+        image = request.POST.get("image", None)
+        stock = request.POST.get("stock", 0)
+        is_bestseller = request.POST.get("is_bestseller", False)
+        discount_percentage = request.POST.get("discount_percentage", 0)
+        promoted = request.POST.get("promoted", False)
+
+        # Create a new Product instance
+        Product.objects.create(
+            name=name,
+            category=category,
+            brand=brand,
+            price=price,
+            description=description,
+            image=image,
+            stock=stock,
+            is_bestseller=is_bestseller,
+            discount_percentage=discount_percentage,
+            promoted=promoted
+        )
+
+    # Render the template with the categories and brands
+    return render(request, "add_product.html", {"categories": categories, "brands": brands})
 
 
 
