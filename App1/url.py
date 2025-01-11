@@ -70,7 +70,8 @@ urlpatterns = [
     path('add_address', views.add_address, name='add_address'),
     path('view_addresses', views.view_addresses, name='view_addresses'),
     path('set_default_address/<int:address_id>/', views.set_default_address, name='set_default_address'),
-    path('shipping_address', views.shipping_address, name='shipping_address')
+    path('shipping_address', views.shipping_address, name='shipping_address'),
+    path('view_service_user', views.view_service_user, name='view_service_user')
 
 ]
 

@@ -2639,3 +2639,32 @@ def add_service_category(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+
+@csrf_exempt
+def view_service_user(request):
+    try:
+        # Retrieve all services from the database
+        services = Services.objects.all()
+
+        # Prepare the list of services to return as JSON
+        services_data = []
+        for service in services:
+            service_data = {
+                "id": service.id,
+                "vendor_name": service.vendor_name,
+                "phone_number": service.phone_number,
+                "whatsapp_number": service.whatsapp_number,
+                "service_category": service.service_category.name if service.service_category else None,
+                "service_details": service.service_details,
+                "address": service.address,
+                "rate": service.rate,
+                "images": [image.image.url for image in service.images.all()]
+            }
+            services_data.append(service_data)
+
+        # Return the services data as JSON
+        return JsonResponse({"services": services_data}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
