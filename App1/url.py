@@ -75,7 +75,8 @@ urlpatterns = [
     path('view_service_categories_user', views.view_service_categories_user, name='view_service_categories_user'),
     path('view_single_service_user/<int:service_id>/', views.view_single_service_user, name='view_single_service_user'),
     path('log_service_interaction', views.log_service_interaction, name='log_service_interaction'),
-    path('get_service_interaction_logs_admin', views.get_service_interaction_logs_admin, name='get_service_interaction_logs')
+    path('get_service_interaction_logs_admin', views.get_service_interaction_logs_admin, name='get_service_interaction_logs'),
+    path('add_service_rating', views.add_service_rating, name='add_service_rating')
 ]
 
 

@@ -1,4 +1,5 @@
 # models.py
+from cloudinary.models import CloudinaryField
 from django.core.validators import RegexValidator
 from django.db import models
 from django.contrib.auth.hashers import make_password
@@ -7,6 +8,7 @@ from django.contrib.auth.hashers import make_password
 from datetime import timedelta, date
 from email.policy import default
 from django.contrib.auth.models import User
+from django.utils.timezone import now
 from rest_framework import serializers
 from django.utils import timezone
 
@@ -251,7 +253,7 @@ class Services(models.Model):
 
 class ServiceImage(models.Model):
     service = models.ForeignKey('Services', on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='service_images/')  # Stores the image in the 'service_images' directory
+    image = CloudinaryField('image') # Stores the image in the 'service_images' directory
     uploaded_at = models.DateTimeField(auto_now_add=True)  # Tracks when the image was uploaded
 
     def __str__(self):
@@ -277,9 +279,12 @@ class ServiceInteractionLog(models.Model):
         verbose_name_plural = "Service Interaction Logs"
         ordering = ['-timestamp']
 
-# class Services(models.Model):
-#     Service_name = models.CharField(max_length=2000)
-#     Service_category = models.CharField(max_length=2000)
-#     Service_details = models.TextField()
-#     Rate = models.IntegerField()
-#     Image = models.URLField(max_length=2000, blank=True, null=True)
+class Rating(models.Model):
+    service = models.ForeignKey(Services, on_delete=models.CASCADE, related_name='ratings')
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)  # Optional: To track which user gave the rating
+    rating = models.IntegerField()  # Rating value (e.g., 1-5)
+    comment = models.TextField(null=True, blank=True)  # Optional: Comment about the service
+    created_at = models.DateTimeField(default=now)
+
+    def __str__(self):
+        return f"{self.service.vendor_name} - {self.rating} stars"
