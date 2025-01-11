@@ -252,3 +252,8 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
+
+
+
+TIME_ZONE = 'Asia/Kolkata'  # Replace with your preferred time zone
+USE_TZ = True

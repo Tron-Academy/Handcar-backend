@@ -2728,7 +2728,7 @@ def view_single_service_user(request, service_id):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-
+from django.utils.timezone import localtime
 @csrf_exempt
 def log_service_interaction(request):
     if request.method == 'POST':
@@ -2745,8 +2745,11 @@ def log_service_interaction(request):
                 if action in ['CALL', 'WHATSAPP']:
                     log = ServiceInteractionLog(service=service, action=action)
                     log.save()
-
-                    return JsonResponse({"message": f"Interaction logged successfully for {action}."}, status=201)
+                    log_timestamp_local = localtime(log.timestamp).strftime('%Y-%m-%d %H:%M:%S')
+                    return JsonResponse({
+                        "message": f"Interaction logged successfully for {action}.",
+                        "timestamp": log_timestamp_local
+                    }, status=201)
 
                 return JsonResponse({"error": "Invalid action."}, status=400)
             else:
@@ -2758,3 +2761,25 @@ def log_service_interaction(request):
             return JsonResponse({"error": str(e)}, status=500)
     else:
         return JsonResponse({"error": "Invalid HTTP method. Use POST."}, status=405)
+
+
+def get_service_interaction_logs_admin(request):
+    try:
+        # Retrieve all logs, or filter based on service if needed
+        logs = ServiceInteractionLog.objects.all().select_related('service')
+
+        # Prepare the log data for JSON response
+        logs_data = [
+            {
+                "id": log.id,
+                "service_name": log.service.vendor_name,
+                "action": log.action,
+                "timestamp": log.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                "user_ip": log.user_ip,
+            }
+            for log in logs
+        ]
+
+        return JsonResponse({"logs": logs_data}, status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
