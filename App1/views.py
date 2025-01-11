@@ -14,7 +14,7 @@ from twilio.rest import Client
 import random
 from django.core.cache import cache
 from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand, Coupon, Plan, Subscriber, \
-    Subscription, Services, ServiceCategory, ServiceImage
+    Subscription, Services, ServiceCategory, ServiceImage, ServiceInteractionLog
 from .utils import geocode_address
 
 
@@ -1227,11 +1227,19 @@ def edit_vendor_profile(request, vendor_id):
                 else:
                     return JsonResponse({"error": "Invalid service category name."}, status=400)
             vendor.save()
+            # if 'images' in request.FILES:
+            #     uploaded_images = request.FILES.getlist('images')  # Get the uploaded files
+            #     for image in uploaded_images:
+            #         ServiceImage.objects.create(service=vendor, image=image)  # Save image for the service
             if 'images' in request.FILES:
                 uploaded_images = request.FILES.getlist('images')  # Get the uploaded files
                 for image in uploaded_images:
-                    ServiceImage.objects.create(service=vendor, image=image)  # Save image for the service
+                    # Upload each image to Cloudinary
+                    cloudinary_response = upload(image)
+                    image_url = cloudinary_response['secure_url']  # Get the secure URL from the response
 
+                    # Save the image URL in the ServiceImage model
+                    ServiceImage.objects.create(service=vendor, image=image_url)
             return JsonResponse({"message": "Vendor updated successfully."}, status=200)
 
         except Exception as e:
@@ -2688,3 +2696,65 @@ def view_service_user(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+
+@csrf_exempt
+def view_single_service_user(request, service_id):
+    try:
+        # Retrieve the service with the given service_id
+        service = Services.objects.get(id=service_id)
+
+        # Prepare the service data to return as JSON
+        service_data = {
+            "id": service.id,
+            "vendor_name": service.vendor_name,
+            "phone_number": service.phone_number,
+            "whatsapp_number": service.whatsapp_number,
+            "service_category": service.service_category.name if service.service_category else None,
+            "service_details": service.service_details,
+            "address": service.address,
+            "rate": service.rate,
+            "images": [image.image.url for image in service.images.all()]
+        }
+
+        # Return the service data as JSON
+        return JsonResponse({"service": service_data}, status=200)
+
+    except Services.DoesNotExist:
+        return JsonResponse({"error": "Service not found."}, status=404)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+
+@csrf_exempt
+def log_service_interaction(request):
+    if request.method == 'POST':
+        try:
+            # Retrieve action and service_id from request
+            action = request.POST.get('action')  # 'CALL' or 'WHATSAPP'
+            service_id = request.POST.get('service_id')
+
+            if action and service_id:
+                # Retrieve the service
+                service = Services.objects.get(id=service_id)
+
+                # Log the interaction
+                if action in ['CALL', 'WHATSAPP']:
+                    log = ServiceInteractionLog(service=service, action=action)
+                    log.save()
+
+                    return JsonResponse({"message": f"Interaction logged successfully for {action}."}, status=201)
+
+                return JsonResponse({"error": "Invalid action."}, status=400)
+            else:
+                return JsonResponse({"error": "Missing required parameters."}, status=400)
+
+        except Services.DoesNotExist:
+            return JsonResponse({"error": "Service not found."}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Invalid HTTP method. Use POST."}, status=405)

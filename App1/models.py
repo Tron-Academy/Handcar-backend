@@ -258,6 +258,25 @@ class ServiceImage(models.Model):
         return f"Image for {self.service.service_name}"
 
 
+class ServiceInteractionLog(models.Model):
+    ACTION_CHOICES = [
+        ('CALL', 'Call'),
+        ('WHATSAPP', 'WhatsApp Message'),
+    ]
+
+    service = models.ForeignKey('Services', on_delete=models.CASCADE, related_name='interaction_logs')
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    timestamp = models.DateTimeField(default=timezone.now)
+    user_ip = models.GenericIPAddressField(null=True, blank=True)  # Optional: To capture user IP address
+
+    def __str__(self):
+        return f"{self.action} - {self.service.vendor_name} at {self.timestamp}"
+
+    class Meta:
+        verbose_name = "Service Interaction Log"
+        verbose_name_plural = "Service Interaction Logs"
+        ordering = ['-timestamp']
+
 # class Services(models.Model):
 #     Service_name = models.CharField(max_length=2000)
 #     Service_category = models.CharField(max_length=2000)

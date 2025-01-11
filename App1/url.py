@@ -72,8 +72,9 @@ urlpatterns = [
     path('set_default_address/<int:address_id>/', views.set_default_address, name='set_default_address'),
     path('shipping_address', views.shipping_address, name='shipping_address'),
     path('view_service_user', views.view_service_user, name='view_service_user'),
-    path('view_service_categories_user', views.view_service_categories_user, name='view_service_categories_user')
-
+    path('view_service_categories_user', views.view_service_categories_user, name='view_service_categories_user'),
+    path('view_single_service_user/<int:service_id>/', views.view_single_service_user, name='view_single_service_user'),
+    path('log_service_interaction', views.log_service_interaction, name='log_service_interaction')
 ]
 
 
