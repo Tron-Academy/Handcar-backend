@@ -279,7 +279,7 @@ class ServiceInteractionLog(models.Model):
         verbose_name_plural = "Service Interaction Logs"
         ordering = ['-timestamp']
 
-class Rating(models.Model):
+class Service_Rating(models.Model):
     service = models.ForeignKey(Services, on_delete=models.CASCADE, related_name='ratings')
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)  # Optional: To track which user gave the rating
     rating = models.IntegerField()  # Rating value (e.g., 1-5)
@@ -288,3 +288,5 @@ class Rating(models.Model):
 
     def __str__(self):
         return f"{self.service.vendor_name} - {self.rating} stars"
+
+
