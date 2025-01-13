@@ -2875,9 +2875,9 @@ def view_service_rating(request):
             rating_data = {
                 "id": rating.id,
                 "vendor_name": rating.service.vendor_name,
-                "phone_number": rating.user.username,
-                "whatsapp_number": rating.rating,
-                "service_category": rating.comment
+                "username": rating.user.first_name,
+                "rating": rating.rating,
+                "comment": rating.comment
             }
             ratings_data.append(rating_data)  # Append each rating to the list
 
