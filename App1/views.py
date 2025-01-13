@@ -2763,11 +2763,41 @@ def log_service_interaction(request):
     else:
         return JsonResponse({"error": "Invalid HTTP method. Use POST."}, status=405)
 
+# @csrf_exempt
+# def get_service_interaction_logs_admin(request):
+#     try:
+#         # Retrieve all logs, or filter based on service if needed
+#         logs = ServiceInteractionLog.objects.all().select_related('service')
+#
+#         # Prepare the log data for JSON response
+#         logs_data = [
+#             {
+#                 "id": log.id,
+#                 "service_name": log.service.vendor_name,
+#                 "action": log.action,
+#                 "timestamp": log.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+#                 "user_ip": log.user_ip,
+#             }
+#             for log in logs
+#         ]
+#
+#         return JsonResponse({"logs": logs_data}, status=200)
+#     except Exception as e:
+#         return JsonResponse({"error": str(e)}, status=500)
+
+
+
 @csrf_exempt
 def get_service_interaction_logs_admin(request):
     try:
-        # Retrieve all logs, or filter based on service if needed
-        logs = ServiceInteractionLog.objects.all().select_related('service')
+        # Check if there's a service_name query parameter
+        service_name = request.GET.get('service_name')
+
+        # If service_name is provided, filter the logs based on the service name
+        if service_name:
+            logs = ServiceInteractionLog.objects.filter(service__vendor_name__icontains=service_name).select_related('service')
+        else:
+            logs = ServiceInteractionLog.objects.all().select_related('service')
 
         # Prepare the log data for JSON response
         logs_data = [
@@ -2782,11 +2812,9 @@ def get_service_interaction_logs_admin(request):
         ]
 
         return JsonResponse({"logs": logs_data}, status=200)
+
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-
-
-
 
 
 @api_view(['POST'])
@@ -2831,3 +2859,32 @@ def add_service_rating(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def view_service_rating(request):
+    try:
+        # Retrieve all service ratings from the database
+        service_ratings = Service_Rating.objects.all()
+
+        # Initialize an empty list to store all rating data
+        ratings_data = []
+
+        # Iterate through each rating and collect the data
+        for rating in service_ratings:
+            rating_data = {
+                "id": rating.id,
+                "vendor_name": rating.service.vendor_name,
+                "phone_number": rating.user.username,
+                "whatsapp_number": rating.rating,
+                "service_category": rating.comment
+            }
+            ratings_data.append(rating_data)  # Append each rating to the list
+
+        # Return the ratings data as JSON
+        return JsonResponse({"Ratings": ratings_data}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
