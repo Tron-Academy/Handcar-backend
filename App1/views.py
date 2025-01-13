@@ -8,13 +8,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from geopy.exc import GeocoderTimedOut
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from twilio.rest import Client
 import random
 from django.core.cache import cache
 from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand, Coupon, Plan, Subscriber, \
-    Subscription, Services, ServiceCategory, ServiceImage, ServiceInteractionLog
+    Subscription, Services, ServiceCategory, ServiceImage, ServiceInteractionLog, Service_Rating
 from .utils import geocode_address
 
 
@@ -2787,47 +2788,46 @@ def get_service_interaction_logs_admin(request):
 
 
 
-@csrf_exempt
+
+@api_view(['POST'])
+@authentication_classes([CustomJWTAuthentication])
+@permission_classes([IsAuthenticated])
 def add_service_rating(request):
-    if request.method == 'POST':
+    try:
+        # Parse the JSON request body
+        data = json.loads(request.body)
+
+        # Extract required fields
+        service_id = data.get('service_id')
+        rating_value = data.get('rating')
+        comment = data.get('comment', '')  # Optional
+
+        # Validate the input
+        if not service_id or not rating_value:
+            return JsonResponse({"error": "service_id and rating are required."}, status=400)
+
+        if int(rating_value) < 1 or int(rating_value) > 5:
+            return JsonResponse({"error": "Rating must be between 1 and 5."}, status=400)
+
+        # Fetch the related service object
         try:
-            # Parse the JSON request body
-            data = json.loads(request.body)
-
-            # Extract required fields
-            service_id = data.get('service_id')
-            rating_value = data.get('rating')
-            comment = data.get('comment', '')  # Optional
-            user_id = data.get('user_id')  # Assuming user ID is passed; adjust if using authentication
-
-            # Validate the input
-            if not service_id or not rating_value or not user_id:
-                return JsonResponse({"error": "service_id, rating, and user_id are required."}, status=400)
-
-            if int(rating_value) < 1 or int(rating_value) > 5:
-                return JsonResponse({"error": "Rating must be between 1 and 5."}, status=400)
-
-            # Fetch the related objects
             service = Services.objects.get(id=service_id)
-            user = User.objects.get(id=user_id)
-
-            # Check if the user has already rated the service (optional logic)
-            existing_rating = Rating.objects.filter(service=service, user=user).first()
-            if existing_rating:
-                return JsonResponse({"error": "You have already rated this service."}, status=400)
-
-            # Create the new rating
-            new_rating = Rating(service=service, user=user, rating=rating_value, comment=comment)
-            new_rating.save()
-
-            return JsonResponse({"message": "Rating added successfully."}, status=201)
-
         except Services.DoesNotExist:
             return JsonResponse({"error": "Service not found."}, status=404)
-        except User.DoesNotExist:
-            return JsonResponse({"error": "User not found."}, status=404)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
 
-    else:
-        return JsonResponse({"error": "Invalid HTTP method. Use POST."}, status=405)
+        # Use the authenticated user from the request
+        user = request.user
+
+        # Check if the user has already rated the service (optional logic)
+        existing_rating = Service_Rating.objects.filter(service=service, user=user).first()
+        if existing_rating:
+            return JsonResponse({"error": "You have already rated this service."}, status=400)
+
+        # Create the new rating
+        new_rating = Service_Rating(service=service, user=user, rating=rating_value, comment=comment)
+        new_rating.save()
+
+        return JsonResponse({"message": "Rating added successfully."}, status=201)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
