@@ -2888,3 +2888,25 @@ def view_service_rating(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+@csrf_exempt
+def get_nearby_services(request):
+    user_lat = float(request.GET.get('lat'))  # User's latitude
+    user_lng = float(request.GET.get('lng'))  # User's longitude
+
+    radius = 10  # Define the search radius in kilometers
+
+    nearby_services = []
+
+    # Loop through all services and check if they are within the radius
+    for service in Services.objects.all():
+        distance = haversine(user_lat, user_lng, service.latitude, service.longitude)
+
+        if distance <= radius:
+            nearby_services.append({
+                'name': service.vendor_name,
+                'latitude': service.latitude,
+                'longitude': service.longitude,
+                'distance': round(distance, 2)  # Include the distance
+            })
+
+    return JsonResponse({'services': nearby_services}, status=200)

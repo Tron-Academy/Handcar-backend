@@ -78,7 +78,8 @@ urlpatterns = [
     path('get_service_interaction_logs_admin', views.get_service_interaction_logs_admin, name='get_service_interaction_logs'),
     path('add_service_rating', views.add_service_rating, name='add_service_rating'),
     path('add_service_rating', views.add_service_rating, name='add_service_rating'),
-    path('view_service_rating', views.view_service_rating, name='view_service_rating')
+    path('view_service_rating', views.view_service_rating, name='view_service_rating'),
+    path('get_nearby_services', views.get_nearby_services, name='get_nearby_services')
 ]
 
 
