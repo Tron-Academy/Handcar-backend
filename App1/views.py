@@ -2887,26 +2887,76 @@ def view_service_rating(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+#
+# @csrf_exempt
+# def get_nearby_services(request):
+#     user_lat = float(request.GET.get('lat'))  # User's latitude
+#     user_lng = float(request.GET.get('lng'))  # User's longitude
+#
+#     radius = 10  # Define the search radius in kilometers
+#
+#     nearby_services = []
+#
+#     # Loop through all services and check if they are within the radius
+#     for service in Services.objects.all():
+#         distance = haversine(user_lat, user_lng, service.latitude, service.longitude)
+#
+#
+#         if distance <= radius:
+#             nearby_services.append({
+#                 'name': service.vendor_name,
+#                 'latitude': service.latitude,
+#                 'longitude': service.longitude,
+#                 'distance': round(distance, 2)  # Include the distance
+#             })
+#
+#     return JsonResponse({'services': nearby_services}, status=200)
+#
+
+
 
 @csrf_exempt
-def get_nearby_services(request):
-    user_lat = float(request.GET.get('lat'))  # User's latitude
-    user_lng = float(request.GET.get('lng'))  # User's longitude
+def view_service_by_users(request):
+    try:
+        # Retrieve all services from the database
+        services = Services.objects.all()
 
-    radius = 10  # Define the search radius in kilometers
+        # Get filter parameters
+        user_lat = request.GET.get('lat')
+        user_lng = request.GET.get('lng')
+        radius = float(request.GET.get('radius', 10))  # Default radius is 10 km
 
-    nearby_services = []
+        services_data = []
 
-    # Loop through all services and check if they are within the radius
-    for service in Services.objects.all():
-        distance = haversine(user_lat, user_lng, service.latitude, service.longitude)
+        for service in services:
+            if user_lat and user_lng:
+                # Calculate distance if coordinates are provided
+                user_location = (float(user_lat), float(user_lng))
+                service_location = (service.latitude, service.longitude)
+                distance = haversine(user_location, service_location)
 
-        if distance <= radius:
-            nearby_services.append({
-                'name': service.vendor_name,
-                'latitude': service.latitude,
-                'longitude': service.longitude,
-                'distance': round(distance, 2)  # Include the distance
-            })
+                if distance > radius:
+                    continue  # Skip services outside the radius
 
-    return JsonResponse({'services': nearby_services}, status=200)
+            # Prepare service data
+            service_data = {
+                "id": service.id,
+                "vendor_name": service.vendor_name,
+                "phone_number": service.phone_number,
+                "whatsapp_number": service.whatsapp_number,
+                "service_category": service.service_category.name if service.service_category else None,
+                "service_details": service.service_details,
+                "address": service.address,
+                "rate": service.rate,
+                "images": [image.image.url for image in service.images.all()],
+            }
+
+            if user_lat and user_lng:
+                service_data['distance'] = round(distance, 2)  # Include distance if calculated
+
+            services_data.append(service_data)
+
+        return JsonResponse({"services": services_data}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
