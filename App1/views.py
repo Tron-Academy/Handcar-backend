@@ -2861,13 +2861,25 @@ def add_service_rating(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+
 @csrf_exempt
 def view_service_rating(request):
     try:
-        # Retrieve all service ratings from the database
-        service_ratings = Service_Rating.objects.all()
+        # Get the service ID from the query parameters
+        service_id = request.GET.get('service_id')
 
-        # Initialize an empty list to store all rating data
+        if not service_id:
+            # If no service_id is provided, return an error response
+            return JsonResponse({"error": "Service ID is required."}, status=400)
+
+        # Filter ratings by the provided service ID
+        service_ratings = Service_Rating.objects.filter(service_id=service_id)
+
+        # Check if there are any ratings for the given service ID
+        if not service_ratings.exists():
+            return JsonResponse({"message": "No ratings found for the specified service."}, status=404)
+
+        # Initialize an empty list to store rating data
         ratings_data = []
 
         # Iterate through each rating and collect the data
@@ -2877,7 +2889,7 @@ def view_service_rating(request):
                 "vendor_name": rating.service.vendor_name,
                 "username": rating.user.first_name,
                 "rating": rating.rating,
-                "comment": rating.comment
+                "comment": rating.comment,
             }
             ratings_data.append(rating_data)  # Append each rating to the list
 
@@ -2886,7 +2898,6 @@ def view_service_rating(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-
 #
 # @csrf_exempt
 # def get_nearby_services(request):
@@ -2916,7 +2927,7 @@ def view_service_rating(request):
 
 
 @csrf_exempt
-def view_service_by_users(request):
+def get_nearby_services(request):
     try:
         # Retrieve all services from the database
         services = Services.objects.all()
@@ -2931,9 +2942,7 @@ def view_service_by_users(request):
         for service in services:
             if user_lat and user_lng:
                 # Calculate distance if coordinates are provided
-                user_location = (float(user_lat), float(user_lng))
-                service_location = (service.latitude, service.longitude)
-                distance = haversine(user_location, service_location)
+                distance = haversine(float(user_lat), float(user_lng), service.latitude, service.longitude)
 
                 if distance > radius:
                     continue  # Skip services outside the radius

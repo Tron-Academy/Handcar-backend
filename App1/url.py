@@ -79,8 +79,8 @@ urlpatterns = [
     path('add_service_rating', views.add_service_rating, name='add_service_rating'),
     path('add_service_rating', views.add_service_rating, name='add_service_rating'),
     path('view_service_rating', views.view_service_rating, name='view_service_rating'),
-    # path('get_nearby_services', views.get_nearby_services, name='get_nearby_services'),
-    path('view_service_by_users', views.view_service_by_users, name='view_service_by_users')
+    path('get_nearby_services', views.get_nearby_services, name='get_nearby_services'),
+
 ]
 
 
