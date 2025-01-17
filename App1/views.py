@@ -1,13 +1,18 @@
 from random import random
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
+from django.template.loader import render_to_string
+from django.utils.http import urlsafe_base64_encode
 from django.views.decorators.csrf import csrf_exempt
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from geopy.exc import GeocoderTimedOut
+from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -433,34 +438,6 @@ def subscribe(request):
     logger.warning("Invalid request method")
     return HttpResponseBadRequest("Invalid request method.")
 
-# @csrf_exempt
-# def display_cart(request):
-#     if request.user.is_authenticated:
-#         # Get all cart items for the logged-in user
-#         cart_items = CartItem.objects.filter(user=request.user)
-#
-#         # Prepare cart items data for JSON response
-#         cart_data = []
-#         for item in cart_items:
-#             cart_data.append({
-#                 'product_name': item.product.name,
-#                 'product_price': item.product.price,
-#                 'quantity': item.quantity,
-#                 'total_price': item.product.price * item.quantity,
-#             })
-#
-#         # Calculate total price for the cart
-#         total_price = sum(item['total_price'] for item in cart_data)
-#
-#         # Return JSON response with cart items and total price
-#         return JsonResponse({
-#             'cart_items': cart_data,
-#             'total_price': total_price
-#         })
-#
-#     return JsonResponse({'error': 'User not authenticated'}, status=401)
-
-
 
 class DisplayCartView(APIView):
     # Specify authentication and permission classes
@@ -522,80 +499,7 @@ class UpdateCartItemView(APIView):
 
         return Response({"message": "Cart item updated successfully"}, status=status.HTTP_200_OK)
 
-#
-# def remove_cart_item(request, item_id):
-#     if request.user.is_authenticated:
-#         # Get the cart item based on the ID and user
-#         cart_item = get_object_or_404(CartItem, id=item_id, user=request.user)
-#
-#         # Delete the cart item
-#         cart_item.delete()
-#
-#         # Get all remaining cart items for the logged-in user
-#         cart_items = CartItem.objects.filter(user=request.user)
-#
-#         # Prepare cart items data for JSON response
-#         cart_data = []
-#         for item in cart_items:
-#             cart_data.append({
-#                 'product_name': item.product.name,
-#                 'product_price': item.product.price,
-#                 'quantity': item.quantity,
-#                 'total_price': item.product.price * item.quantity,
-#             })
-#
-#         # Calculate total price for the cart after removal
-#         total_price = sum(item['total_price'] for item in cart_data)
-#
-#         # Return updated cart data
-#         return JsonResponse({
-#             'message': 'Item removed successfully',
-#             'cart_items': cart_data,
-#             'total_price': total_price
-#         })
-#
-#     return JsonResponse({'error': 'User not authenticated'}, status=401)
-#
-# class RemoveCartItemView(APIView):
-#     """
-#     View to remove an item from the user's cart.
-#     """
-#     authentication_classes = [CustomJWTAuthentication]  # Ensure the user is authenticated
-#     permission_classes = [IsAuthenticated]  # Only authenticated users can remove cart items
-#
-#     def delete(self, request, item_id):
-#         try:
-#             item_id = int(item_id)
-#             # Get the cart item based on the ID and user
-#             cart_item = CartItem.objects.get(id=item_id, user=request.user)
-#         except CartItem.DoesNotExist:
-#             return Response({"error": "Cart item not found"}, status=status.HTTP_404_NOT_FOUND)
-#
-#         # Delete the cart item
-#         cart_item.delete()
-#
-#         # Get all remaining cart items for the logged-in user
-#         cart_items = CartItem.objects.filter(user=request.user)
-#
-#         # Prepare cart items data for JSON response
-#         cart_data = []
-#         for item in cart_items:
-#             cart_data.append({
-#                 'product_name': item.product.name,
-#                 'product_price': item.product.price,
-#                 'quantity': item.quantity,
-#                 'total_price': item.product.price * item.quantity,
-#             })
-#
-#         # Calculate total price for the cart after removal
-#         total_price = sum(item['total_price'] for item in cart_data)
-#
-#         # Return updated cart data
-#         return Response({
-#             'message': 'Item removed successfully',
-#             'cart_items': cart_data,
-#             'total_price': total_price
-#         })
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -619,6 +523,7 @@ class RemoveCartItemView(APIView):
 
         cart_item.delete()
         return Response({"message": "Item removed successfully"})
+
 
 @csrf_exempt
 @login_required
@@ -1099,171 +1004,6 @@ def delete_product(request, product_id):
 
 
 
-@csrf_exempt
-def add_vendor_by_admin(request):
-    if request.method == 'POST':
-        try:
-            # Parse JSON data from the request body
-            data = json.loads(request.body)
-
-            vendor_name = data.get('vendor_name')
-            phone_number = data.get('phone_number')
-            email = data.get('email')
-            password = data.get('password')
-
-            # Validate required fields
-            if not vendor_name or not phone_number or not email or not password:
-                return JsonResponse({"error": "All fields are required."}, status=400)
-
-            # Validate email format
-            try:
-                validate_email(email)
-            except ValidationError:
-                return JsonResponse({"error": "Invalid email format."}, status=400)
-
-            # Check if email already exists
-            if Services.objects.filter(email=email).exists():
-                return JsonResponse({"error": "Email already exists."}, status=400)
-
-            # Create the vendor
-            vendor = Services.objects.create(
-                vendor_name=vendor_name,
-                phone_number=phone_number,
-                email=email,
-                password=password
-            )
-
-            return JsonResponse({
-                "message": "Service Vendor added successfully.",
-                "Service": {
-                    "id": vendor.id,
-                    "vendor_name": vendor.vendor_name,
-                    "phone_number": vendor.phone_number,
-                    "email": vendor.email,
-                }
-            }, status=201)
-
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON data."}, status=400)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-
-    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
-
-
-
-
-@csrf_exempt
-def view_vendors(request):
-    if request.method == 'GET':
-        search_query = request.GET.get('search', '').strip()
-        print("Search Query:", search_query)  # Debugging
-        if search_query:
-            vendors = Services.objects.filter(vendor_name__icontains=search_query)
-        else:
-            vendors = Services.objects.all()
-        data = [{"id": vendor.id,
-                 "name": vendor.vendor_name,
-                 "price": vendor.phone_number,
-                 "email": vendor.email} for vendor in vendors]
-        return JsonResponse({"vendor": data}, safe=False)
-
-
-@csrf_exempt
-def edit_vendor_profile(request, vendor_id):
-    if request.method == 'GET':
-        try:
-            # Retrieve the vendor
-            vendor = get_object_or_404(Services, id=vendor_id)
-
-            # Return vendor data as JSON
-            vendor_data = {
-                "vendor_name": vendor.vendor_name,
-                "email": vendor.email,
-                "phone_number": vendor.phone_number,
-                "whatsapp_number": vendor.whatsapp_number,
-                "address": vendor.address,
-                "latitude": vendor.latitude,
-                "longitude": vendor.longitude,
-                "service_category": vendor.service_category.name,
-                "service_details": vendor.service_details,
-                "rate": vendor.rate,
-                "images": [image.image.url for image in vendor.images.all()]
-            }
-            return JsonResponse(vendor_data, status=200)
-
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-
-    elif request.method == 'POST':
-        try:
-            # Retrieve the vendor to be edited
-            vendor = get_object_or_404(Services, id=vendor_id)
-
-            # Parse JSON data
-            data = request.POST
-
-            # Update fields if provided
-            vendor.vendor_name = data.get('vendor_name', vendor.vendor_name)  # Vendor can edit name
-            vendor.email = data.get('email', vendor.email)  # Vendor can edit email
-            vendor.password = data.get('password', vendor.password)  # Vendor can change password
-            vendor.phone_number = data.get('phone_number', vendor.phone_number)  # Vendor can edit phone number
-
-            # Vendor-specific fields that only vendors can update
-            vendor.whatsapp_number = data.get('whatsapp_number', vendor.whatsapp_number)
-            # vendor.address = data.get('address', vendor.address)
-            new_address = data.get('address')
-            if new_address and new_address != vendor.address:
-                vendor.address = new_address
-                print(f"New address set: {new_address}")
-                vendor.latitude, vendor.longitude = geocode_address(new_address)
-                print(f"Geocoded latitude: {vendor.latitude}, longitude: {vendor.longitude}")
-            vendor.service_details = data.get('service_details', vendor.service_details)
-            vendor.rate = data.get('rate', vendor.rate)
-            service_category_name = data.get('service_category')
-            if service_category_name:
-                service_category = ServiceCategory.objects.filter(name=service_category_name).first()
-                if service_category:
-                    vendor.service_category = service_category
-                else:
-                    return JsonResponse({"error": "Invalid service category name."}, status=400)
-            vendor.save()
-            # if 'images' in request.FILES:
-            #     uploaded_images = request.FILES.getlist('images')  # Get the uploaded files
-            #     for image in uploaded_images:
-            #         ServiceImage.objects.create(service=vendor, image=image)  # Save image for the service
-            if 'images' in request.FILES:
-                uploaded_images = request.FILES.getlist('images')  # Get the uploaded files
-                for image in uploaded_images:
-                    # Upload each image to Cloudinary
-                    cloudinary_response = upload(image)
-                    image_url = cloudinary_response['secure_url']  # Get the secure URL from the response
-
-                    # Save the image URL in the ServiceImage model
-                    ServiceImage.objects.create(service=vendor, image=image_url)
-            return JsonResponse({"message": "Vendor updated successfully."}, status=200)
-
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-
-    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
-
-
-@csrf_exempt
-def delete_vendor(request, vendor_id):
-    if request.method == 'DELETE':
-        try:
-            # Retrieve the vendor instance by ID
-            vendors = get_object_or_404(Services, id=vendor_id)
-
-            # Delete the vendor
-            vendors.delete()
-
-            return JsonResponse({"message": "Vendor deleted successfully"}, status=200)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-    else:
-        return JsonResponse({"error": "Invalid HTTP method"}, status=405)
 
 
 @csrf_exempt
@@ -1638,169 +1378,13 @@ def remove_promoted_brand(request):
 
     return JsonResponse({"error": "Invalid request method"}, status=400)
 
-# DATE ISSUE WAS NOT THERE FOR START DATE
-# @csrf_exempt
-# def add_subscriber(request):
-#     try:
-#         data = json.loads(request.body)
-#
-#         email = data.get('email')
-#         service_type = data.get('service_type')
-#         plan = data.get('plan')
-#         duration = data.get('duration')
-#         start_date = data.get('start_date')
-#         status = data.get('status')
-#
-#         # Validate email
-#         if not User.objects.filter(email=email).exists():
-#             return JsonResponse({'error': 'No such user registered.'}, status=400)
-#
-#         # Save subscriber
-#         subscriber = Subscriber(
-#             email=email,
-#             service_type=service_type,
-#             plan=plan,
-#             duration=duration,
-#             start_date=parse_date(start_date),
-#             status=status
-#         )
-#         subscriber.save()
-#
-#         return JsonResponse({'message': 'Subscriber added successfully.'}, status=201)
-#
-#     except json.JSONDecodeError:
-#         return JsonResponse({'error': 'Invalid JSON.'}, status=400)
-#     except Exception as e:
-#         return JsonResponse({'error': str(e)}, status=500)
-from django.http import JsonResponse
+
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.hashers import make_password, check_password
-# from .models import Vendor
-import json
-
-@csrf_exempt
-def update_vendor(request, vendor_id):
-    try:
-        vendor = Vendor.objects.get(id=vendor_id)
-
-        if request.method == 'POST':
-            data = json.loads(request.body)
-
-            # Update email
-            email = data.get('email')
-            if email:
-                vendor.email = email
-
-            # Update password
-            password = data.get('password')
-            if password:
-                vendor.password = make_password(password)  # Hash the password before saving
-
-            # Update location
-            location = data.get('location')
-            if location:
-                vendor.location = location
-
-            vendor.save()
-
-            return JsonResponse({'message': 'Vendor details updated successfully.'}, status=200)
-
-        return JsonResponse({'error': 'Invalid request method.'}, status=405)
-
-    except Vendor.DoesNotExist:
-        return JsonResponse({'error': 'Vendor not found.'}, status=404)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.dateparse import parse_date
-import json
-from datetime import datetime
-from .models import Subscriber
-from django.contrib.auth.models import User
-
-
 from .utils import haversine, geocode_address
-
-
-import json
-from datetime import datetime, timedelta
-from django.http import JsonResponse
 from .models import Subscriber
 from .utils import get_geocoded_location, get_nearby_vendors
-
-# @csrf_exempt
-# def add_subscriber(request):
-#     try:
-#         data = json.loads(request.body)
-#
-#         email = data.get('email')
-#         address = data.get('address')
-#         service_type = data.get('service_type')
-#         plan = data.get('plan')
-#         duration = data.get('duration')
-#         assigned_vendor = data.get('assigned_vendor')
-#         start_date = data.get('start_date')
-#
-#         # Validate email
-#         if not User.objects.filter(email=email).exists():
-#             return JsonResponse({'error': 'No such user registered.'}, status=400)
-#
-#         # Validate and parse start_date
-#         if start_date:
-#             try:
-#                 start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-#             except ValueError:
-#                 return JsonResponse({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
-#         else:
-#             return JsonResponse({'error': 'Start date is required.'}, status=400)
-#
-#         # Validate duration
-#         try:
-#             duration = int(duration)
-#         except (ValueError, TypeError):
-#             return JsonResponse({'error': 'Duration must be an integer.'}, status=400)
-#
-#         # Geocode subscriber address to get latitude and longitude using the reusable function
-#         if address:
-#             subscriber_lat, subscriber_lon = get_geocoded_location(address)
-#         else:
-#             return JsonResponse({'error': 'Address is required for geocoding.'}, status=400)
-#
-#         # Get nearby vendors using the reusable function
-#         nearby_vendors = get_nearby_vendors(subscriber_lat, subscriber_lon)
-#
-#         if not nearby_vendors:
-#             return JsonResponse({'error': 'No nearby vendors found.'}, status=404)
-#
-#         # Save subscriber
-#         subscriber = Subscriber(
-#             email=email,
-#             address=address,
-#             service_type=service_type,
-#             plan=plan,
-#             duration=duration,
-#             assigned_vendor=assigned_vendor,
-#             start_date=start_date,
-#             latitude=subscriber_lat,
-#             longitude=subscriber_lon,
-#         )
-#         subscriber.save()
-#
-#         return JsonResponse({'message': 'Subscriber added successfully.', 'assigned_vendor': assigned_vendor, 'end_date': subscriber.end_date, 'nearby_vendors': nearby_vendors}, status=201)
-#
-#     except json.JSONDecodeError:
-#         return JsonResponse({'error': 'Invalid JSON.'}, status=400)
-#     except ValueError as e:
-#         return JsonResponse({'error': str(e)}, status=400)
-#     except Exception as e:
-#         return JsonResponse({'error': str(e)}, status=500)
-
-
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-# from .models import  # Import Vendor model to get vendor details
 
 def send_vendor_notification(vendor_id, message):
     # Send a message to the vendor's group
@@ -1904,7 +1488,7 @@ def view_subscribers(request):
 
 
 
-def view_users(request):
+def view_users_by_admin(request):
     if request.method == 'GET':
         search_query = request.GET.get('search', '')
         if search_query:
@@ -1918,311 +1502,6 @@ def view_users(request):
                     "email": users.email} for users in user]
         return JsonResponse({"user": data}, safe=False)
 
-
-
-import cloudinary.uploader
-from django.http import JsonResponse
-import json
-@csrf_exempt
-# def add_service(request):
-#     if request.method == 'POST':
-#         print("POST Data:", request.POST)  # Log the POST data
-#         print("FILES Data:", request.FILES)  # Log the FILES data
-#         try:
-#             # Get the form data
-#             service_name = request.POST.get('Service_name')
-#             service_category = request.POST.get('Service_category')
-#             service_details = request.POST.get('Service_details')
-#             rate = request.POST.get('Rate')
-#             image = request.FILES.get('Image')  # The image file sent from the frontend
-#             print("Service_name:", service_name)
-#             print("Service_category:", service_category)
-#             print("Service_details:", service_details)
-#             print("Rate:", rate)
-#             print("Image:", image)
-#
-#             # Validate required fields
-#             if not all([service_name, service_category, service_details, rate, image]):
-#                 return JsonResponse({"error": "All fields are required."}, status=400)
-#
-#             # Upload image to Cloudinary
-#             try:
-#                 upload_result = cloudinary.uploader.upload(image)  # Upload the image file
-#                 image_url = upload_result.get('secure_url')  # Get the URL of the uploaded image
-#             except Exception as e:
-#                 return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
-#
-#             # Save the service to the database
-#             service = Services.objects.create(
-#                 Service_name=service_name,
-#                 Service_category=service_category,
-#                 Service_details=service_details,
-#                 Rate=rate,
-#                 Image=image_url  # Save the Cloudinary image URL
-#             )
-#
-#             return JsonResponse({
-#                 "message": "Service added successfully.",
-#                 "service_id": service.id,
-#                 "image_url": image_url
-#             }, status=201)
-#
-#         except json.JSONDecodeError:
-#             return JsonResponse({"error": "Invalid JSON data."}, status=400)
-#         except Exception as e:
-#             return JsonResponse({"error": str(e)}, status=500)
-#
-#     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
-def add_service(request):
-    if request.method == 'POST':
-        try:
-            # Get the form data
-            service_name = request.POST.get('Service_name')
-            service_category = request.POST.get('Service_category')
-            service_details = request.POST.get('Service_details')
-            rate = request.POST.get('Rate')
-            image = request.FILES.get('Image')
-
-            # Debugging logs
-            print("Service_name:", service_name)
-            print("Service_category:", service_category)
-            print("Service_details:", service_details)
-            print("Rate:", rate)
-            print("Image:", image)
-
-            # Validate required fields
-            if not all([service_name, service_category, service_details, rate, image]):
-                return JsonResponse({"error": "All fields are required."}, status=400)
-
-            # Validate numeric fields
-            try:
-                rate = float(rate)
-            except ValueError:
-                return JsonResponse({"error": "Rate must be a numeric value."}, status=400)
-
-            # Upload image to Cloudinary
-            try:
-                upload_result = cloudinary.uploader.upload(image)
-                image_url = upload_result.get('secure_url')
-            except Exception as e:
-                print(f"Cloudinary upload error: {e}")
-                return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
-
-            # Save the service to the database
-            service = Services.objects.create(
-                Service_name=service_name,
-                Service_category=service_category,
-                Service_details=service_details,
-                Rate=rate,
-                Image=image_url  # Save the Cloudinary image URL
-            )
-
-            return JsonResponse({
-                "message": "Service added successfully.",
-                "service_id": service.id,
-                "image_url": image_url
-            }, status=201)
-
-        except Exception as e:
-            print(f"Error: {e}")
-            return JsonResponse({"error": str(e)}, status=500)
-
-    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
-
-
-@csrf_exempt
-def view_services(request):
-    if request.method == 'GET':
-        services = Services.objects.all()
-        service_list = [
-            {
-                'service_name' : data.Service_name,
-                'service_category': data.Service_category,
-                'service_details': data.service_details,
-                'rate': data.Rate,
-                'image': data.Image
-            }
-            for data in services
-        ]
-        return JsonResponse({'Service List:': service_list})
-    return JsonResponse({'Error': 'Invalid request method'})
-
-# @csrf_exempt
-# def edit_service(request, service_id):
-#     if request.method == 'PUT':
-#         try:
-#             # Parse the JSON body
-#             import json
-#             data = json.loads(request.body)
-#
-#             # Retrieve the service by ID
-#             service = Services.objects.get(id=service_id)
-#
-#             # Update the service fields if provided
-#             service.Service_name = data.get('Service_name', service.Service_name)
-#             service.Service_category = data.get('Service_category', service.Service_category)
-#             service.Service_details = data.get('Service_details', service.Service_details)
-#             service.Rate = data.get('Rate', service.Rate)
-#
-#             # Update the image if provided
-#             if 'Image' in request.FILES:
-#                 image = request.FILES['Image']
-#                 # Upload new image to Cloudinary
-#                 try:
-#                     upload_result = cloudinary.uploader.upload(image)
-#                     service.Image = upload_result.get('secure_url')
-#                 except Exception as e:
-#                     print(f"Cloudinary upload error: {e}")
-#                     return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
-#
-#             # Save the updated service to the database
-#             service.save()
-#
-#             return JsonResponse({"message": "Service updated successfully."}, status=200)
-#
-#         except Services.DoesNotExist:
-#             return JsonResponse({"error": "Service not found."}, status=404)
-#         except Exception as e:
-#             print(f"Error: {e}")
-#             return JsonResponse({"error": str(e)}, status=500)
-#
-#     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
-@csrf_exempt
-def edit_service(request, service_id):
-    # Handle GET request to fetch the existing service data
-    if request.method == 'GET':
-        try:
-            service = Services.objects.get(id=service_id)
-            service_data = {
-                'Service_name': service.Service_name,
-                'Service_category': service.Service_category,
-                'Service_details': service.Service_details,
-                'Rate': service.Rate,
-                'Image': service.Image,  # If you want to return the image URL
-            }
-            return JsonResponse(service_data, status=200)
-        except Services.DoesNotExist:
-            return JsonResponse({"error": "Service not found."}, status=404)
-
-    # Handle POST request to update the service data
-    elif request.method == 'POST':
-        try:
-            # Parse the JSON body
-            data = json.loads(request.body)
-
-            # Retrieve the service by ID
-            service = Services.objects.get(id=service_id)
-
-            # Update the service fields if provided
-            service.Service_name = data.get('Service_name', service.Service_name)
-            service.Service_category = data.get('Service_category', service.Service_category)
-            service.Service_details = data.get('Service_details', service.Service_details)
-            service.Rate = data.get('Rate', service.Rate)
-
-            # Update the image if provided
-            if 'Image' in request.FILES:
-                image = request.FILES['Image']
-                # Upload new image to Cloudinary
-                try:
-                    upload_result = cloudinary.uploader.upload(image)
-                    service.Image = upload_result.get('secure_url')
-                except Exception as e:
-                    print(f"Cloudinary upload error: {e}")
-                    return JsonResponse({"error": f"Image upload failed: {str(e)}"}, status=500)
-
-            # Save the updated service to the database
-            service.save()
-
-            return JsonResponse({"message": "Service updated successfully."}, status=200)
-
-        except Services.DoesNotExist:
-            return JsonResponse({"error": "Service not found."}, status=404)
-        except Exception as e:
-            print(f"Error: {e}")
-            return JsonResponse({"error": str(e)}, status=500)
-
-    # If the method is not GET or POST
-    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
-
-@csrf_exempt
-def delete_service(request, service_id):
-    if request.method == 'DELETE':
-        try:
-            # Retrieve the service by ID
-            service = Services.objects.get(id=service_id)
-
-            # Delete the service
-            service.delete()
-
-            return JsonResponse({"message": "Service deleted successfully."}, status=200)
-
-        except Services.DoesNotExist:
-            return JsonResponse({"error": "Service not found."}, status=404)
-        except Exception as e:
-            print(f"Error: {e}")
-            return JsonResponse({"error": str(e)}, status=500)
-
-    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
-
-from django.contrib.auth import authenticate
-
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
-# @csrf_exempt
-# def admin_login(request):
-#     if request.method == 'POST':
-#         username = request.data.get('username')
-#         password = request.data.get('password')
-#
-#         user = authenticate(username=username, password=password)
-#
-#         if user and user.is_superuser:
-#             # Generate JWT tokens
-#             refresh = RefreshToken.for_user(user)
-#             return Response({
-#                 "message": "Admin login successful",
-#                 "access_token": str(refresh.access_token),
-#                 "refresh_token": str(refresh)
-#             })
-#
-#         return Response({"error": "Invalid admin credentials"}, status=status.HTTP_401_UNAUTHORIZED)
-
-# @csrf_exempt
-# def admin_login(request):
-#     if request.method == 'POST':
-#         username = request.POST.get('username')
-#         password = request.POST.get('password')
-#
-#         print(f"Username: {username}, Password: {password}")  # Debug input
-#
-#         user = authenticate(username=username, password=password)
-#
-#         if user:
-#             print(f"User authenticated: {user.username}, Is superuser: {user.is_superuser}")  # Debug authentication
-#         else:
-#             print("Authentication failed")
-#
-#         if user and user.is_superuser:
-#             refresh = RefreshToken.for_user(user)
-#             response= JsonResponse({
-#                 "message": "Admin login successful",
-#                 "access_token": str(refresh.access_token),
-#                 "refresh_token": str(refresh)
-#             })
-#             response.set_cookie(
-#                 'access_token', str(refresh.access_token),
-#                 max_age=timedelta(minutes=15), httponly=True, samesite='Lax'
-#             )
-#             response.set_cookie(
-#                 'refresh_token', str(refresh),
-#                 max_age=timedelta(days=1), httponly=True, samesite='Lax'
-#             )
-#             return response
-#
-#         return JsonResponse({"error": "Invalid admin credentials"}, status=401)
-#
-#     return JsonResponse({"error": "Method not allowed"}, status=405)
 
 
 @csrf_exempt
@@ -2259,63 +1538,6 @@ def admin_login(request):
         return JsonResponse({"error": "Invalid admin credentials"}, status=401)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
-
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth import authenticate
-from rest_framework_simplejwt.tokens import RefreshToken
-
-from django.contrib.auth import authenticate
-
-
-
-import json
-
-from datetime import timedelta
-
-# @csrf_exempt
-# def UserLogin(request):
-#     if request.method == 'POST':
-#         content_type = request.content_type
-#         print(f"Content-Type: {content_type}")
-#         print(f"Request Body: {request.body}")
-#         print(f"POST Data: {request.POST}")
-#
-#         username = request.POST.get('username')
-#         password = request.POST.get('password')
-#
-#         if not username or not password:
-#             return JsonResponse({"error": "Missing username or password"}, status=400)
-#
-#         user = authenticate(username=username, password=password)
-#
-#         if user and not user.is_superuser:
-#             refresh = RefreshToken.for_user(user)
-#             response = JsonResponse({
-#                 "message": "User login successful",
-#                 "access_token": str(refresh.access_token),
-#                 "refresh_token": str(refresh)
-#             })
-#
-#             # Make the cookies persistent by setting a long max_age (e.g., 30 days)
-#             response.set_cookie(
-#                 'access_token', str(refresh.access_token),
-#                 max_age=30 * 24 * 60 * 60,  # 30 days in seconds
-#                 httponly=True,
-#                 secure=False  # Use True for production with HTTPS
-#             )
-#             response.set_cookie(
-#                 'refresh_token', str(refresh),
-#                 max_age=30 * 24 * 60 * 60,  # 30 days in seconds
-#                 httponly=True,
-#                 secure=False  # Use True for production with HTTPS
-#             )
-#             return response
-#
-#         return JsonResponse({"error": "Invalid user credentials"}, status=401)
-#
-#     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
 
@@ -2375,12 +1597,9 @@ def UserLogin(request):
 
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
-from django.http import JsonResponse
-# from .models import Vendor
-
 
 @csrf_exempt
-def VendorLogin(request):
+def Vendor_Login(request):
     if request.method == 'POST':
         phone_number = request.POST.get('phone_number')
         password = request.POST.get('password')
@@ -2567,46 +1786,6 @@ def shipping_address(request):
 
 
 
-def add_product(request):
-    # Fetch all categories and brands from the database
-    categories = Category.objects.all()  # All category instances
-    brands = Brand.objects.all()         # All brand instances
-
-    # Handle POST request for adding a product
-    if request.method == "POST":
-        # Retrieve form data and process it (e.g., save to the database)
-        name = request.POST.get("name")
-        category_name = request.POST.get("category")
-        brand_name = request.POST.get("brand")
-        # Retrieve the instances for category and brand by name
-        category = Category.objects.get(name=category_name)
-        brand = Brand.objects.get(name=brand_name)
-        price = request.POST.get("price")
-        description = request.POST.get("description")
-        image = request.POST.get("image", None)
-        stock = request.POST.get("stock", 0)
-        is_bestseller = request.POST.get("is_bestseller", False)
-        discount_percentage = request.POST.get("discount_percentage", 0)
-        promoted = request.POST.get("promoted", False)
-
-        # Create a new Product instance
-        Product.objects.create(
-            name=name,
-            category=category,
-            brand=brand,
-            price=price,
-            description=description,
-            image=image,
-            stock=stock,
-            is_bestseller=is_bestseller,
-            discount_percentage=discount_percentage,
-            promoted=promoted
-        )
-
-    # Render the template with the categories and brands
-    return render(request, "add_product.html", {"categories": categories, "brands": brands})
-
-
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -2763,48 +1942,32 @@ def log_service_interaction(request):
     else:
         return JsonResponse({"error": "Invalid HTTP method. Use POST."}, status=405)
 
-# @csrf_exempt
-# def get_service_interaction_logs_admin(request):
-#     try:
-#         # Retrieve all logs, or filter based on service if needed
-#         logs = ServiceInteractionLog.objects.all().select_related('service')
-#
-#         # Prepare the log data for JSON response
-#         logs_data = [
-#             {
-#                 "id": log.id,
-#                 "service_name": log.service.vendor_name,
-#                 "action": log.action,
-#                 "timestamp": log.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-#                 "user_ip": log.user_ip,
-#             }
-#             for log in logs
-#         ]
-#
-#         return JsonResponse({"logs": logs_data}, status=200)
-#     except Exception as e:
-#         return JsonResponse({"error": str(e)}, status=500)
-
-
 
 @csrf_exempt
 def get_service_interaction_logs_admin(request):
     try:
-        # Check if there's a service_name query parameter
+        # Get query parameters
         service_name = request.GET.get('service_name')
+        mode_of_communication = request.GET.get('mode_of_communication')  # e.g., "CALL", "WHATSAPP"
 
-        # If service_name is provided, filter the logs based on the service name
+        # Base queryset
+        logs = ServiceInteractionLog.objects.select_related('service')
+
+        # Apply filters if query parameters are provided
         if service_name:
-            logs = ServiceInteractionLog.objects.filter(service__vendor_name__icontains=service_name).select_related('service')
-        else:
-            logs = ServiceInteractionLog.objects.all().select_related('service')
+            logs = logs.filter(
+                service__vendor_name__icontains=service_name
+            ).exclude(service__vendor_name__isnull=True).exclude(service__vendor_name__exact="")
 
-        # Prepare the log data for JSON response
+        if mode_of_communication:
+            logs = logs.filter(action=mode_of_communication)  # Match against choices in ACTION_CHOICES
+
+        # Prepare data for response
         logs_data = [
             {
                 "id": log.id,
                 "service_name": log.service.vendor_name,
-                "action": log.action,
+                "action": log.get_action_display(),  # Use display value for choices
                 "timestamp": log.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                 "user_ip": log.user_ip,
             }
@@ -2935,8 +2098,7 @@ def get_nearby_services(request):
         # Get filter parameters
         user_lat = request.GET.get('lat')
         user_lng = request.GET.get('lng')
-        radius = float(request.GET.get('radius', 10))  # Default radius is 10 km
-
+        radius = 20
         services_data = []
 
         for service in services:
@@ -2966,6 +2128,442 @@ def get_nearby_services(request):
             services_data.append(service_data)
 
         return JsonResponse({"services": services_data}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+
+class Edit_UserProfile_By_user(APIView):
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        try:
+            user = request.user  # DRF automatically adds the authenticated user
+            data = request.data  # DRF parses JSON body for you
+
+            # Optional fields the user can edit
+            first_name = data.get('first_name')
+            last_name = data.get('last_name')
+            email = data.get('email')
+
+            if first_name:
+                user.first_name = first_name
+            if last_name:
+                user.last_name = last_name
+            if email:
+                # Add email validation if needed
+                user.email = email
+
+            user.save()
+
+            return Response({
+                "message": "User details updated successfully",
+                "user": {
+                    "username": user.username,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "email": user.email,
+                }
+            }, status=200)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def add_vendor_by_admin(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON data from the request body
+            data = json.loads(request.body)
+
+            vendor_name = data.get('vendor_name')
+            phone_number = data.get('phone_number')
+            email = data.get('email')
+            password = data.get('password')
+
+            # Validate required fields
+            if not vendor_name or not phone_number or not email or not password:
+                return JsonResponse({"error": "All fields are required."}, status=400)
+
+            # Validate email format
+            try:
+                validate_email(email)
+            except ValidationError:
+                return JsonResponse({"error": "Invalid email format."}, status=400)
+
+            # Check if email already exists
+            if Services.objects.filter(email=email).exists():
+                return JsonResponse({"error": "Email already exists."}, status=400)
+
+            # Create the vendor
+            vendor = Services.objects.create(
+                vendor_name=vendor_name,
+                phone_number=phone_number,
+                email=email,
+                password=password
+            )
+
+            return JsonResponse({
+                "message": "Service Vendor added successfully.",
+                "Service": {
+                    "id": vendor.id,
+                    "vendor_name": vendor.vendor_name,
+                    "phone_number": vendor.phone_number,
+                    "email": vendor.email,
+                }
+            }, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data."}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+
+@csrf_exempt
+def view_services(request):
+    if request.method == 'GET':
+        search_query = request.GET.get('search', '').strip()
+        print("Search Query:", search_query)  # Debugging
+        if search_query:
+            vendors = Services.objects.filter(vendor_name__icontains=search_query)
+        else:
+            vendors = Services.objects.all()
+        data = [{"id": vendor.id,
+                 "name": vendor.vendor_name,
+                 "price": vendor.phone_number,
+                 "email": vendor.email} for vendor in vendors]
+        return JsonResponse({"vendor": data}, safe=False)
+
+
+@csrf_exempt
+def edit_vendor_profile(request, vendor_id):
+    if request.method == 'GET':
+        try:
+            # Retrieve the vendor
+            vendor = get_object_or_404(Services, id=vendor_id)
+
+            # Return vendor data as JSON
+            vendor_data = {
+                "vendor_name": vendor.vendor_name,
+                "email": vendor.email,
+                "phone_number": vendor.phone_number,
+                "whatsapp_number": vendor.whatsapp_number,
+                "address": vendor.address,
+                "latitude": vendor.latitude,
+                "longitude": vendor.longitude,
+                "service_category": vendor.service_category.name,
+                "service_details": vendor.service_details,
+                "rate": vendor.rate,
+                "images": [image.image.url for image in vendor.images.all()]
+            }
+            return JsonResponse(vendor_data, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    elif request.method == 'POST':
+        try:
+            # Retrieve the vendor to be edited
+            vendor = get_object_or_404(Services, id=vendor_id)
+
+            # Parse JSON data
+            data = request.POST
+
+            # Update fields if provided
+            vendor.vendor_name = data.get('vendor_name', vendor.vendor_name)  # Vendor can edit name
+            vendor.email = data.get('email', vendor.email)  # Vendor can edit email
+            vendor.password = data.get('password', vendor.password)  # Vendor can change password
+            vendor.phone_number = data.get('phone_number', vendor.phone_number)  # Vendor can edit phone number
+
+            # Vendor-specific fields that only vendors can update
+            vendor.whatsapp_number = data.get('whatsapp_number', vendor.whatsapp_number)
+            # vendor.address = data.get('address', vendor.address)
+            new_address = data.get('address')
+            if new_address and new_address != vendor.address:
+                vendor.address = new_address
+                print(f"New address set: {new_address}")
+                vendor.latitude, vendor.longitude = geocode_address(new_address)
+                print(f"Geocoded latitude: {vendor.latitude}, longitude: {vendor.longitude}")
+            vendor.service_details = data.get('service_details', vendor.service_details)
+            vendor.rate = data.get('rate', vendor.rate)
+            service_category_name = data.get('service_category')
+            if service_category_name:
+                service_category = ServiceCategory.objects.filter(name=service_category_name).first()
+                if service_category:
+                    vendor.service_category = service_category
+                else:
+                    return JsonResponse({"error": "Invalid service category name."}, status=400)
+            vendor.save()
+
+            if 'images' in request.FILES:
+                uploaded_images = request.FILES.getlist('images')  # Get the uploaded files
+                for image in uploaded_images:
+                    # Upload each image to Cloudinary
+                    cloudinary_response = upload(image)
+                    image_url = cloudinary_response['secure_url']  # Get the secure URL from the response
+
+                    # Save the image URL in the ServiceImage model
+                    ServiceImage.objects.create(service=vendor, image=image_url)
+            return JsonResponse({"message": "Vendor updated successfully."}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+
+@csrf_exempt
+def delete_service(request, service_id):
+    if request.method == 'DELETE':
+        try:
+            # Retrieve the service by ID
+            service = get_object_or_404(Services, id=service_id)
+            # service = Services.objects.get(id=service_id)
+
+            # Delete the service
+            service.delete()
+
+            return JsonResponse({"message": "Service deleted successfully."}, status=200)
+
+        except Services.DoesNotExist:
+            return JsonResponse({"error": "Service not found."}, status=404)
+        except Exception as e:
+            print(f"Error: {e}")
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+
+@csrf_exempt
+def view_service_category(request):
+    try:
+        # Retrieve all categories
+        categories = ServiceCategory.objects.all()
+
+        # Prepare data for all categories
+        categories_data = [
+            {
+                "id": category.id,
+                "name": category.name
+            }
+            for category in categories
+        ]
+
+        # Return the list of categories
+        return JsonResponse({"categories": categories_data}, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def edit_service_category(request, service_category_id):
+    if request.method == 'GET':
+        try:
+            # Retrieve the category by ID
+            category = ServiceCategory.objects.get(id=service_category_id)
+
+            # Return category details
+            return JsonResponse({
+                "id": category.id,
+                "name": category.name
+            }, status=200)
+
+        except ServiceCategory.DoesNotExist:
+            return JsonResponse({"error": "Service category not found."}, status=404)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    elif request.method == 'POST':
+        try:
+            # Parse JSON data from the request body
+            data = json.loads(request.body)
+
+            # Extract the new name
+            new_name = data.get('name')
+
+            if not new_name:
+                return JsonResponse({"error": "The 'name' field is required."}, status=400)
+
+            # Check if the category exists
+            try:
+                category = ServiceCategory.objects.get(id=service_category_id)
+            except ServiceCategory.DoesNotExist:
+                return JsonResponse({"error": "Service category not found."}, status=404)
+
+            # Update the category name
+            category.name = new_name
+            category.save()
+
+            return JsonResponse({
+                "message": "Service category updated successfully.",
+                "service_category": {
+                    "id": category.id,
+                    "name": category.name
+                }
+            }, status=200)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data."}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    else:
+        return JsonResponse({"error": "Invalid HTTP method. Use GET for retrieving and POST for updating."}, status=405)
+
+
+
+@csrf_exempt
+def delete_service_category(request, service_category_id):
+    if request.method == 'DELETE':
+        try:
+            # Retrieve the category by ID
+            category = ServiceCategory.objects.get(id=service_category_id)
+
+            # Delete the category
+            category.delete()
+
+            return JsonResponse({"message": "Service category deleted successfully."}, status=200)
+
+        except ServiceCategory.DoesNotExist:
+            return JsonResponse({"error": "Service category not found."}, status=404)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method. Use DELETE for removing."}, status=405)
+
+
+
+# @csrf_exempt
+# def forgot_password(request):
+#     if request.method == 'POST':
+#         try:
+#             # Parse JSON data from the request body
+#             data = json.loads(request.body)
+#
+#             # Extract the email address
+#             email = data.get('email')
+#
+#             if not email:
+#                 return JsonResponse({"error": "Email is required."}, status=400)
+#
+#             # Check if the user exists
+#             user = User.objects.filter(email=email).first()
+#
+#             if not user:
+#                 return JsonResponse({"error": "User with this email does not exist."}, status=404)
+#
+#             # Generate password reset token
+#             token = default_token_generator.make_token(user)
+#             uid = urlsafe_base64_encode(str(user.id).encode())
+#
+#             # Create password reset URL
+#             reset_link = f"{request.scheme}://{request.get_host()}/reset-password/{uid}/{token}/"
+#
+#             # Prepare email content
+#             subject = "Password Reset Request"
+#             message = render_to_string('password_reset_email.html', {
+#                 'user': user,
+#                 'reset_link': reset_link,
+#             })
+#
+#             # Send the password reset email
+#             send_mail(subject, message, 'no-reply@yourdomain.com', [user.email])
+#
+#             return JsonResponse({"message": "Password reset email sent successfully."}, status=200)
+#
+#         except Exception as e:
+#             return JsonResponse({"error": str(e)}, status=500)
+#
+#     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+
+@csrf_exempt
+def forgot_password(request):
+    if request.method == 'POST':
+        # Get the email address from the request body (sent from React frontend)
+        try:
+            data = json.loads(request.body)
+            email = data.get('email')
+
+            if not email:
+                return JsonResponse({"error": "Email is required."}, status=400)
+
+            # Fetch user by email
+            user = get_user_model().objects.filter(email=email).first()
+            if not user:
+                return JsonResponse({"error": "No user found with this email."}, status=404)
+
+            # Generate password reset token
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(str(user.pk).encode())
+
+            # Create the password reset URL
+            reset_url = f"{settings.SITE_URL}/reset-password/{uid}/{token}"
+
+            # Send plain text email
+            subject = "Password Reset Requested"
+            message = f"""
+            Hi {user.username},
+
+            You requested a password reset. To reset your password, click the link below:
+
+            {reset_url}
+
+            If you didn't request this, you can ignore this email.
+
+            Regards,
+            Team Handcar 
+            """
+
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email])
+
+            return JsonResponse({"message": "Password reset email sent."}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method."}, status=405)
+
+
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth import get_user_model
+from django.http import JsonResponse
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.views.decorators.csrf import csrf_exempt
+
+@csrf_exempt
+def reset_password(request, uidb64, token):
+    try:
+        # Decode the UID
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = get_user_model().objects.get(id=uid)
+
+        # Check if the token is valid
+        if default_token_generator.check_token(user, token):
+            if request.method == 'POST':
+                data = json.loads(request.body)
+                new_password = data.get('new_password')
+
+                if not new_password:
+                    return JsonResponse({"error": "New password is required."}, status=400)
+
+                # Set the new password and save the user
+                user.set_password(new_password)
+                user.save()
+
+                return JsonResponse({"message": "Password reset successful."}, status=200)
+
+            return JsonResponse({"error": "Invalid request method. Use POST to reset the password."}, status=405)
+
+        else:
+            return JsonResponse({"error": "Invalid or expired token."}, status=400)
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
