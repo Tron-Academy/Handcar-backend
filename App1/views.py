@@ -2171,13 +2171,34 @@ class Edit_UserProfile_By_user(APIView):
             return Response({"error": str(e)}, status=500)
 
 
-@csrf_exempt
-def add_vendor_by_admin(request):
-    if request.method == 'POST':
-        try:
-            # Parse JSON data from the request body
-            data = json.loads(request.body)
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAdminUser
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
+from rest_framework.parsers import JSONParser
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from .authentication import CustomJWTAuthentication  # Ensure correct import path
+from .models import Services  # Replace with the correct model import
 
+
+class AddVendorByAdmin(APIView):
+    authentication_classes = [CustomJWTAuthentication]  # Use your custom authentication
+    permission_classes = [IsAdminUser]  # Ensure only admin users can access
+
+    def post(self, request, *args, **kwargs):
+        try:
+            # Authenticate user (handled by authentication_classes)
+            user = request.user
+            if not user.is_authenticated:
+                raise AuthenticationFailed("Authentication failed.")
+
+            # Check admin permissions
+            if not user.is_staff:  # Or use `user.is_superuser` if needed
+                raise PermissionDenied("Admin access required.")
+
+            # Parse JSON data
+            data = JSONParser().parse(request)
             vendor_name = data.get('vendor_name')
             phone_number = data.get('phone_number')
             email = data.get('email')
@@ -2185,17 +2206,17 @@ def add_vendor_by_admin(request):
 
             # Validate required fields
             if not vendor_name or not phone_number or not email or not password:
-                return JsonResponse({"error": "All fields are required."}, status=400)
+                return Response({"error": "All fields are required."}, status=400)
 
             # Validate email format
             try:
                 validate_email(email)
             except ValidationError:
-                return JsonResponse({"error": "Invalid email format."}, status=400)
+                return Response({"error": "Invalid email format."}, status=400)
 
             # Check if email already exists
             if Services.objects.filter(email=email).exists():
-                return JsonResponse({"error": "Email already exists."}, status=400)
+                return Response({"error": "Email already exists."}, status=400)
 
             # Create the vendor
             vendor = Services.objects.create(
@@ -2205,7 +2226,7 @@ def add_vendor_by_admin(request):
                 password=password
             )
 
-            return JsonResponse({
+            return Response({
                 "message": "Service Vendor added successfully.",
                 "Service": {
                     "id": vendor.id,
@@ -2216,12 +2237,66 @@ def add_vendor_by_admin(request):
             }, status=201)
 
         except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON data."}, status=400)
+            return Response({"error": "Invalid JSON data."}, status=400)
+        except AuthenticationFailed as auth_error:
+            return Response({"error": str(auth_error)}, status=401)
+        except PermissionDenied as perm_error:
+            return Response({"error": str(perm_error)}, status=403)
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            return Response({"error": str(e)}, status=500)
 
-    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
-
+#
+# @csrf_exempt
+# def add_vendor_by_admin(request):
+#     if request.method == 'POST':
+#         try:
+#             # Parse JSON data from the request body
+#             data = json.loads(request.body)
+#
+#             vendor_name = data.get('vendor_name')
+#             phone_number = data.get('phone_number')
+#             email = data.get('email')
+#             password = data.get('password')
+#
+#             # Validate required fields
+#             if not vendor_name or not phone_number or not email or not password:
+#                 return JsonResponse({"error": "All fields are required."}, status=400)
+#
+#             # Validate email format
+#             try:
+#                 validate_email(email)
+#             except ValidationError:
+#                 return JsonResponse({"error": "Invalid email format."}, status=400)
+#
+#             # Check if email already exists
+#             if Services.objects.filter(email=email).exists():
+#                 return JsonResponse({"error": "Email already exists."}, status=400)
+#
+#             # Create the vendor
+#             vendor = Services.objects.create(
+#                 vendor_name=vendor_name,
+#                 phone_number=phone_number,
+#                 email=email,
+#                 password=password
+#             )
+#
+#             return JsonResponse({
+#                 "message": "Service Vendor added successfully.",
+#                 "Service": {
+#                     "id": vendor.id,
+#                     "vendor_name": vendor.vendor_name,
+#                     "phone_number": vendor.phone_number,
+#                     "email": vendor.email,
+#                 }
+#             }, status=201)
+#
+#         except json.JSONDecodeError:
+#             return JsonResponse({"error": "Invalid JSON data."}, status=400)
+#         except Exception as e:
+#             return JsonResponse({"error": str(e)}, status=500)
+#
+#     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+#
 
 @csrf_exempt
 def view_services(request):
@@ -2439,49 +2514,6 @@ def delete_service_category(request, service_category_id):
     return JsonResponse({"error": "Invalid HTTP method. Use DELETE for removing."}, status=405)
 
 
-
-# @csrf_exempt
-# def forgot_password(request):
-#     if request.method == 'POST':
-#         try:
-#             # Parse JSON data from the request body
-#             data = json.loads(request.body)
-#
-#             # Extract the email address
-#             email = data.get('email')
-#
-#             if not email:
-#                 return JsonResponse({"error": "Email is required."}, status=400)
-#
-#             # Check if the user exists
-#             user = User.objects.filter(email=email).first()
-#
-#             if not user:
-#                 return JsonResponse({"error": "User with this email does not exist."}, status=404)
-#
-#             # Generate password reset token
-#             token = default_token_generator.make_token(user)
-#             uid = urlsafe_base64_encode(str(user.id).encode())
-#
-#             # Create password reset URL
-#             reset_link = f"{request.scheme}://{request.get_host()}/reset-password/{uid}/{token}/"
-#
-#             # Prepare email content
-#             subject = "Password Reset Request"
-#             message = render_to_string('password_reset_email.html', {
-#                 'user': user,
-#                 'reset_link': reset_link,
-#             })
-#
-#             # Send the password reset email
-#             send_mail(subject, message, 'no-reply@yourdomain.com', [user.email])
-#
-#             return JsonResponse({"message": "Password reset email sent successfully."}, status=200)
-#
-#         except Exception as e:
-#             return JsonResponse({"error": str(e)}, status=500)
-#
-#     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
 
 
 @csrf_exempt

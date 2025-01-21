@@ -1,15 +1,13 @@
-
 from django.urls import path
-from . import views  # Make sure to import views from the correct app
+from . import views
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import AddToCartView, DisplayCartView, UpdateCartItemView
+from .views import AddToCartView, DisplayCartView, UpdateCartItemView, AddVendorByAdmin
 urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('signup', views.signup, name='signup'),
     path('generate/otp/', views.generate_otp, name='generate_otp'),
     path('login/send-otp/', views.send_otp, name='send_otp'),
     path('login/otp/', views.login_with_otp, name='login_with_otp'),
-
 
 
     path('add_to_wishlist/<int:product_id>/', views.add_to_wishlist, name='add_to_wishlist'),
@@ -91,7 +89,8 @@ urlpatterns = [
     path('Edit_UserProfile_By_user', views.Edit_UserProfile_By_user.as_view(), name='Edit_UserProfile_By_user'),
     path('view_users_by_admin', views.view_users_by_admin, name='view_users_by_admin'),
 
-    path('add_vendor_by_admin', views.add_vendor_by_admin, name='add_vendor'),
+
+    path('add_vendor_by_admin', views.AddVendorByAdmin.as_view(), name='AddVendorByAdmin'),
     path('view_services', views.view_services, name='view_services'),
     path('edit_vendor_profile/<int:vendor_id>/', views.edit_vendor_profile, name='edit_vendor_profile'),
     path('delete_service/<int:service_id>/',views.delete_service, name='delete_service'),
