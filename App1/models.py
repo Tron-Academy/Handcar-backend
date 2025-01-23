@@ -270,6 +270,7 @@ class ServiceInteractionLog(models.Model):
     action = models.CharField(max_length=10, choices=ACTION_CHOICES)
     timestamp = models.DateTimeField(default=timezone.now)
     user_ip = models.GenericIPAddressField(null=True, blank=True)  # Optional: To capture user IP address
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
         return f"{self.action} - {self.service.vendor_name} at {self.timestamp}"

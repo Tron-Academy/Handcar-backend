@@ -148,6 +148,8 @@ def login_with_otp(request):
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
+
+
 @csrf_exempt
 def view_products(request):
     if request.method == 'GET':
@@ -183,7 +185,6 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import IsAuthenticated
 from .models import Product, CartItem
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 import jwt
@@ -1486,8 +1487,6 @@ def view_subscribers(request):
 
 
 
-
-
 def view_users_by_admin(request):
     if request.method == 'GET':
         search_query = request.GET.get('search', '')
@@ -1502,44 +1501,53 @@ def view_users_by_admin(request):
                     "email": users.email} for users in user]
         return JsonResponse({"user": data}, safe=False)
 
-
-
 @csrf_exempt
 def admin_login(request):
     if request.method == 'POST':
+        # Get the username and password from POST request
         username = request.POST.get('username')
         password = request.POST.get('password')
 
+        # Authenticate user
         user = authenticate(username=username, password=password)
+
+        # Check if user is admin (superuser)
         if user and user.is_superuser:
             refresh = RefreshToken.for_user(user)
+
+            # Calculate expiration date for cookies
+            expires_date = datetime.utcnow() + timedelta(days=30)
+
+            # Prepare the response with access and refresh tokens
             response = JsonResponse({
                 "message": "Admin login successful",
                 "access_token": str(refresh.access_token),
                 "refresh_token": str(refresh)
             })
-            # Set cookies
-            response.set_cookie(
-                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
-                value=str(refresh.access_token),
-                httponly=True,  # Prevent access via JavaScript
-                secure=True,  # Set True in production for HTTPS
-                                 # Adjust as per requirement
-            )
-            response.set_cookie(
-                key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
-                value=str(refresh),
-                httponly=True,
-                secure=True,
 
+            # Set cookies for access_token and refresh_token
+            response.set_cookie(
+                'access_token', str(refresh.access_token),
+                max_age=60 * 60,  # 1 hour for access_token
+                httponly=True,
+                secure=True,  # True for production (HTTPS)
+                samesite='None'  # Allows cross-origin cookies
             )
+            response.set_cookie(
+                'refresh_token', str(refresh),
+                max_age=28 * 24 * 60 * 60,  # 28 days for refresh_token
+                httponly=True,
+                secure=True,  # True for production (HTTPS)
+                samesite='None'  # Allows cross-origin cookies
+            )
+
             return response
 
+        # Invalid admin credentials
         return JsonResponse({"error": "Invalid admin credentials"}, status=401)
 
+    # Method not allowed if not POST request
     return JsonResponse({"error": "Method not allowed"}, status=405)
-
-
 
 from datetime import datetime, timedelta
 from django.http import JsonResponse
@@ -1907,8 +1915,41 @@ def view_single_service_user(request, service_id):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-
+#
 from django.utils.timezone import localtime
+# @csrf_exempt
+# def log_service_interaction(request):
+#     if request.method == 'POST':
+#         try:
+#             # Retrieve action and service_id from request
+#             action = request.POST.get('action')  # 'CALL' or 'WHATSAPP'
+#             service_id = request.POST.get('service_id')
+#
+#             if action and service_id:
+#                 # Retrieve the service
+#                 service = Services.objects.get(id=service_id)
+#
+#                 # Log the interaction
+#                 if action in ['CALL', 'WHATSAPP']:
+#                     log = ServiceInteractionLog(service=service, action=action)
+#                     log.save()
+#                     log_timestamp_local = localtime(log.timestamp).strftime('%Y-%m-%d %H:%M:%S')
+#                     return JsonResponse({
+#                         "message": f"Interaction logged successfully for {action}.",
+#                         "timestamp": log_timestamp_local
+#                     }, status=201)
+#
+#                 return JsonResponse({"error": "Invalid action."}, status=400)
+#             else:
+#                 return JsonResponse({"error": "Missing required parameters."}, status=400)
+#
+#         except Services.DoesNotExist:
+#             return JsonResponse({"error": "Service not found."}, status=404)
+#         except Exception as e:
+#             return JsonResponse({"error": str(e)}, status=500)
+#     else:
+#         return JsonResponse({"error": "Invalid HTTP method. Use POST."}, status=405)
+#
 @csrf_exempt
 def log_service_interaction(request):
     if request.method == 'POST':
@@ -1917,18 +1958,34 @@ def log_service_interaction(request):
             action = request.POST.get('action')  # 'CALL' or 'WHATSAPP'
             service_id = request.POST.get('service_id')
 
+            # Get the current authenticated user
+            user = request.user if request.user.is_authenticated else None
+
             if action and service_id:
                 # Retrieve the service
                 service = Services.objects.get(id=service_id)
 
                 # Log the interaction
                 if action in ['CALL', 'WHATSAPP']:
-                    log = ServiceInteractionLog(service=service, action=action)
+                    log = ServiceInteractionLog(
+                        service=service,
+                        action=action,
+                        user=user  # Add user to the log
+                    )
                     log.save()
                     log_timestamp_local = localtime(log.timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+                    # Prepare user details
+                    user_details = {
+                        "username": user.username if user else None,
+                        "full_name": user.get_full_name() if user else None,
+                        "email": user.email if user else None
+                    } if user else None
+
                     return JsonResponse({
                         "message": f"Interaction logged successfully for {action}.",
-                        "timestamp": log_timestamp_local
+                        "timestamp": log_timestamp_local,
+                        "user": user_details
                     }, status=201)
 
                 return JsonResponse({"error": "Invalid action."}, status=400)
@@ -1941,8 +1998,6 @@ def log_service_interaction(request):
             return JsonResponse({"error": str(e)}, status=500)
     else:
         return JsonResponse({"error": "Invalid HTTP method. Use POST."}, status=405)
-
-
 @csrf_exempt
 def get_service_interaction_logs_admin(request):
     try:
@@ -2171,34 +2226,14 @@ class Edit_UserProfile_By_user(APIView):
             return Response({"error": str(e)}, status=500)
 
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser
-from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
-from rest_framework.parsers import JSONParser
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError
-from .authentication import CustomJWTAuthentication  # Ensure correct import path
-from .models import Services  # Replace with the correct model import
 
-
-class AddVendorByAdmin(APIView):
-    authentication_classes = [CustomJWTAuthentication]  # Use your custom authentication
-    permission_classes = [IsAdminUser]  # Ensure only admin users can access
-
-    def post(self, request, *args, **kwargs):
+@csrf_exempt
+def add_vendor_by_admin(request):
+    if request.method == 'POST':
         try:
-            # Authenticate user (handled by authentication_classes)
-            user = request.user
-            if not user.is_authenticated:
-                raise AuthenticationFailed("Authentication failed.")
+            # Parse JSON data from the request body
+            data = json.loads(request.body)
 
-            # Check admin permissions
-            if not user.is_staff:  # Or use `user.is_superuser` if needed
-                raise PermissionDenied("Admin access required.")
-
-            # Parse JSON data
-            data = JSONParser().parse(request)
             vendor_name = data.get('vendor_name')
             phone_number = data.get('phone_number')
             email = data.get('email')
@@ -2206,17 +2241,17 @@ class AddVendorByAdmin(APIView):
 
             # Validate required fields
             if not vendor_name or not phone_number or not email or not password:
-                return Response({"error": "All fields are required."}, status=400)
+                return JsonResponse({"error": "All fields are required."}, status=400)
 
             # Validate email format
             try:
                 validate_email(email)
             except ValidationError:
-                return Response({"error": "Invalid email format."}, status=400)
+                return JsonResponse({"error": "Invalid email format."}, status=400)
 
             # Check if email already exists
             if Services.objects.filter(email=email).exists():
-                return Response({"error": "Email already exists."}, status=400)
+                return JsonResponse({"error": "Email already exists."}, status=400)
 
             # Create the vendor
             vendor = Services.objects.create(
@@ -2226,7 +2261,7 @@ class AddVendorByAdmin(APIView):
                 password=password
             )
 
-            return Response({
+            return JsonResponse({
                 "message": "Service Vendor added successfully.",
                 "Service": {
                     "id": vendor.id,
@@ -2237,66 +2272,13 @@ class AddVendorByAdmin(APIView):
             }, status=201)
 
         except json.JSONDecodeError:
-            return Response({"error": "Invalid JSON data."}, status=400)
-        except AuthenticationFailed as auth_error:
-            return Response({"error": str(auth_error)}, status=401)
-        except PermissionDenied as perm_error:
-            return Response({"error": str(perm_error)}, status=403)
+            return JsonResponse({"error": "Invalid JSON data."}, status=400)
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
+            return JsonResponse({"error": str(e)}, status=500)
 
-#
-# @csrf_exempt
-# def add_vendor_by_admin(request):
-#     if request.method == 'POST':
-#         try:
-#             # Parse JSON data from the request body
-#             data = json.loads(request.body)
-#
-#             vendor_name = data.get('vendor_name')
-#             phone_number = data.get('phone_number')
-#             email = data.get('email')
-#             password = data.get('password')
-#
-#             # Validate required fields
-#             if not vendor_name or not phone_number or not email or not password:
-#                 return JsonResponse({"error": "All fields are required."}, status=400)
-#
-#             # Validate email format
-#             try:
-#                 validate_email(email)
-#             except ValidationError:
-#                 return JsonResponse({"error": "Invalid email format."}, status=400)
-#
-#             # Check if email already exists
-#             if Services.objects.filter(email=email).exists():
-#                 return JsonResponse({"error": "Email already exists."}, status=400)
-#
-#             # Create the vendor
-#             vendor = Services.objects.create(
-#                 vendor_name=vendor_name,
-#                 phone_number=phone_number,
-#                 email=email,
-#                 password=password
-#             )
-#
-#             return JsonResponse({
-#                 "message": "Service Vendor added successfully.",
-#                 "Service": {
-#                     "id": vendor.id,
-#                     "vendor_name": vendor.vendor_name,
-#                     "phone_number": vendor.phone_number,
-#                     "email": vendor.email,
-#                 }
-#             }, status=201)
-#
-#         except json.JSONDecodeError:
-#             return JsonResponse({"error": "Invalid JSON data."}, status=400)
-#         except Exception as e:
-#             return JsonResponse({"error": str(e)}, status=500)
-#
-#     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
-#
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+
 
 @csrf_exempt
 def view_services(request):

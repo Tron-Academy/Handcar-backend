@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import AddToCartView, DisplayCartView, UpdateCartItemView, AddVendorByAdmin
+from .views import AddToCartView, DisplayCartView, UpdateCartItemView
 urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('signup', views.signup, name='signup'),
@@ -90,7 +90,7 @@ urlpatterns = [
     path('view_users_by_admin', views.view_users_by_admin, name='view_users_by_admin'),
 
 
-    path('add_vendor_by_admin', views.AddVendorByAdmin.as_view(), name='AddVendorByAdmin'),
+    path('add_vendor_by_admin', views.add_vendor_by_admin, name='add_vendor_by_admin'),
     path('view_services', views.view_services, name='view_services'),
     path('edit_vendor_profile/<int:vendor_id>/', views.edit_vendor_profile, name='edit_vendor_profile'),
     path('delete_service/<int:service_id>/',views.delete_service, name='delete_service'),
