@@ -7,6 +7,7 @@ from django.db import IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login
 from django.template.loader import render_to_string
+from django.utils.decorators import method_decorator
 from django.utils.http import urlsafe_base64_encode
 from django.views.decorators.csrf import csrf_exempt
 from django.core.validators import validate_email
@@ -1549,6 +1550,44 @@ def admin_login(request):
     # Method not allowed if not POST request
     return JsonResponse({"error": "Method not allowed"}, status=405)
 
+
+@csrf_exempt
+def Admin_Profile(request):
+    if request.method == 'GET':
+        # Retrieve the token from the cookies
+        token = request.COOKIES.get('access_token')  # Get token from cookies
+
+        if not token:
+            return JsonResponse({"error": "Authorization token missing"}, status=400)
+
+        try:
+            # Decode the token to extract user_id
+            access_token = AccessToken(token)  # Decode the token
+            user_id = access_token['user_id']  # Extract user_id
+
+            print(f"Extracted user_id from token: {user_id}")
+
+            # Get the admin user's details using the extracted user_id
+            user = User.objects.get(id=user_id)
+
+            # Return the admin's profile details as JSON response
+            return JsonResponse({
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'is_superuser': user.is_superuser,
+                'date_joined': user.date_joined,
+                'last_login': user.last_login,
+            })
+
+        except User.DoesNotExist:
+            return JsonResponse({"error": "Admin not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
 from datetime import datetime, timedelta
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -1603,6 +1642,45 @@ def UserLogin(request):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_logged_in_user(request):
+    # Retrieve the token from the cookies
+    token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE'])
+
+    if not token:
+        raise AuthenticationFailed('Authentication token not found in cookies')
+
+    try:
+        # Decode the token to get the payload
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get('user_id')
+
+        if not user_id:
+            raise AuthenticationFailed('User ID not found in token')
+
+        # Fetch the user from the database
+        user = User.objects.get(id=user_id)
+
+        # Prepare user details
+        user_details = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            # Add any other fields you need
+        }
+
+        return Response(user_details)
+
+    except jwt.ExpiredSignatureError:
+        raise AuthenticationFailed('Token has expired')
+    except jwt.DecodeError:
+        raise AuthenticationFailed('Error decoding token')
+    except User.DoesNotExist:
+        raise AuthenticationFailed('User not found')
+
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import User
 
@@ -1654,6 +1732,57 @@ def Vendor_Login(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
+# This view will fetch the logged-in vendor's details
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.tokens import AccessToken  # Import AccessToken
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from rest_framework_simplejwt.tokens import RefreshToken
+
+
+@csrf_exempt
+def Vendor_Profile(request):
+    if request.method == 'GET':
+        # Retrieve the token from the cookies
+        token = request.COOKIES.get('access_token')  # Get token from cookies
+
+        if not token:
+            return JsonResponse({"error": "Authorization token missing"}, status=400)
+
+        try:
+            # Decode the token to extract vendor_id
+            access_token = AccessToken(token)  # Decode the token
+            vendor_id = access_token['vendor_id']  # Extract vendor_id
+
+            print(f"Extracted vendor_id from token: {vendor_id}")
+
+            # Get the vendor's details using the extracted vendor_id
+            vendor = Services.objects.get(id=vendor_id)
+
+            # Return the vendor's profile details as JSON response
+            return JsonResponse({
+                'id': vendor.id,
+                'vendor_name': vendor.vendor_name,
+                'phone_number': vendor.phone_number,
+                'whatsapp_number': vendor.whatsapp_number,
+                'email': vendor.email,
+                'address': vendor.address,
+                'latitude': vendor.latitude,
+                'longitude': vendor.longitude,
+                'service_category': vendor.service_category.name if vendor.service_category else None,
+                'service_details': vendor.service_details,
+                'rate': vendor.rate,
+                'image': vendor.image,
+                'created_at': vendor.created_at,
+                'updated_at': vendor.updated_at
+            })
+
+        except Services.DoesNotExist:
+            return JsonResponse({"error": "Vendor not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
 from rest_framework_simplejwt.tokens import OutstandingToken, BlacklistedToken
@@ -1856,35 +1985,78 @@ def view_service_categories_user(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-
+#
+# @csrf_exempt
+# def view_service_user(request):
+#     try:
+#         # Retrieve all services from the database
+#         services = Services.objects.all()
+#
+#         # Prepare the list of services to return as JSON
+#         services_data = []
+#         for service in services:
+#             service_data = {
+#                 "id": service.id,
+#                 "vendor_name": service.vendor_name,
+#                 "phone_number": service.phone_number,
+#                 "whatsapp_number": service.whatsapp_number,
+#                 "service_category": service.service_category.name if service.service_category else None,
+#                 "service_details": service.service_details,
+#                 "address": service.address,
+#                 "rate": service.rate,
+#                 "images": [image.image.url for image in service.images.all()]
+#             }
+#             services_data.append(service_data)
+#
+#         # Return the services data as JSON
+#         return JsonResponse({"services": services_data}, status=200)
+#
+#     except Exception as e:
+#         return JsonResponse({"error": str(e)}, status=500)
 @csrf_exempt
 def view_service_user(request):
+    # Get latitude and longitude from the request (if available)
     try:
-        # Retrieve all services from the database
-        services = Services.objects.all()
+        user_lat = float(request.GET.get('lat')) if request.GET.get('lat') else None
+        user_lng = float(request.GET.get('lng')) if request.GET.get('lng') else None
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Invalid Latitude or Longitude."}, status=400)
 
-        # Prepare the list of services to return as JSON
-        services_data = []
-        for service in services:
-            service_data = {
-                "id": service.id,
-                "vendor_name": service.vendor_name,
-                "phone_number": service.phone_number,
-                "whatsapp_number": service.whatsapp_number,
-                "service_category": service.service_category.name if service.service_category else None,
-                "service_details": service.service_details,
-                "address": service.address,
-                "rate": service.rate,
-                "images": [image.image.url for image in service.images.all()]
-            }
-            services_data.append(service_data)
+    radius = 10  # Define the search radius in kilometers
 
-        # Return the services data as JSON
-        return JsonResponse({"services": services_data}, status=200)
+    nearby_services = []
 
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    # If latitude and longitude are provided, calculate nearby services
+    if user_lat is not None and user_lng is not None:
+        # Loop through all services and check if they are within the radius
+        for service in Services.objects.all():
+            # Ensure service has valid latitude and longitude before calculating distance
+            if service.latitude is not None and service.longitude is not None:
+                # Calculate the distance only if both latitude and longitude are available
+                distance = haversine(user_lat, user_lng, service.latitude, service.longitude)
 
+                if distance <= radius:
+                    nearby_services.append({
+                        'name': service.vendor_name,
+                        'latitude': service.latitude,
+                        'longitude': service.longitude,
+                        'distance': round(distance, 2)  # Include the distance
+                    })
+        # If no nearby services were found
+        if not nearby_services:
+            return JsonResponse({"message": "No nearby services found within the radius."}, status=404)
+
+    # If latitude and longitude are not provided or invalid, return all services
+    else:
+        # Loop through all services and add them to the list
+        for service in Services.objects.all():
+            nearby_services.append({
+                'name': service.vendor_name,
+                'latitude': service.latitude,
+                'longitude': service.longitude,
+            })
+
+    return JsonResponse({'services': nearby_services}, status=200)
 
 
 @csrf_exempt
@@ -1915,54 +2087,22 @@ def view_single_service_user(request, service_id):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-#
+
 from django.utils.timezone import localtime
-# @csrf_exempt
-# def log_service_interaction(request):
-#     if request.method == 'POST':
-#         try:
-#             # Retrieve action and service_id from request
-#             action = request.POST.get('action')  # 'CALL' or 'WHATSAPP'
-#             service_id = request.POST.get('service_id')
-#
-#             if action and service_id:
-#                 # Retrieve the service
-#                 service = Services.objects.get(id=service_id)
-#
-#                 # Log the interaction
-#                 if action in ['CALL', 'WHATSAPP']:
-#                     log = ServiceInteractionLog(service=service, action=action)
-#                     log.save()
-#                     log_timestamp_local = localtime(log.timestamp).strftime('%Y-%m-%d %H:%M:%S')
-#                     return JsonResponse({
-#                         "message": f"Interaction logged successfully for {action}.",
-#                         "timestamp": log_timestamp_local
-#                     }, status=201)
-#
-#                 return JsonResponse({"error": "Invalid action."}, status=400)
-#             else:
-#                 return JsonResponse({"error": "Missing required parameters."}, status=400)
-#
-#         except Services.DoesNotExist:
-#             return JsonResponse({"error": "Service not found."}, status=404)
-#         except Exception as e:
-#             return JsonResponse({"error": str(e)}, status=500)
-#     else:
-#         return JsonResponse({"error": "Invalid HTTP method. Use POST."}, status=405)
-#
-@csrf_exempt
-def log_service_interaction(request):
-    if request.method == 'POST':
+class LogServiceInteractionView(APIView):
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
         try:
             # Retrieve action and service_id from request
-            action = request.POST.get('action')  # 'CALL' or 'WHATSAPP'
-            service_id = request.POST.get('service_id')
+            action = request.data.get('action')  # DRF uses `request.data` for POST
+            service_id = request.data.get('service_id')
 
             # Get the current authenticated user
-            user = request.user if request.user.is_authenticated else None
+            user = request.user  # DRF ensures this is populated
 
             if action and service_id:
-                # Retrieve the service
                 service = Services.objects.get(id=service_id)
 
                 # Log the interaction
@@ -1970,34 +2110,82 @@ def log_service_interaction(request):
                     log = ServiceInteractionLog(
                         service=service,
                         action=action,
-                        user=user  # Add user to the log
+                        user=user
                     )
                     log.save()
+
                     log_timestamp_local = localtime(log.timestamp).strftime('%Y-%m-%d %H:%M:%S')
-
-                    # Prepare user details
                     user_details = {
-                        "username": user.username if user else None,
-                        "full_name": user.get_full_name() if user else None,
-                        "email": user.email if user else None
-                    } if user else None
+                        "username": user.username,
+                        "full_name": user.get_full_name(),
+                        "email": user.email
+                    }
 
-                    return JsonResponse({
+                    return Response({
                         "message": f"Interaction logged successfully for {action}.",
                         "timestamp": log_timestamp_local,
                         "user": user_details
                     }, status=201)
 
-                return JsonResponse({"error": "Invalid action."}, status=400)
+                return Response({"error": "Invalid action."}, status=400)
             else:
-                return JsonResponse({"error": "Missing required parameters."}, status=400)
+                return Response({"error": "Missing required parameters."}, status=400)
 
         except Services.DoesNotExist:
-            return JsonResponse({"error": "Service not found."}, status=404)
+            return Response({"error": "Service not found."}, status=404)
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
-    else:
-        return JsonResponse({"error": "Invalid HTTP method. Use POST."}, status=405)
+            return Response({"error": str(e)}, status=500)
+from django.shortcuts import render
+from django.core.mail import send_mail
+from django.http import HttpResponse
+from .models import ServiceInteractionLog
+@csrf_exempt
+def send_log_email_view(request):
+    if request.method == 'POST':
+        try:
+            log_id = request.POST.get('log_id')
+            log = ServiceInteractionLog.objects.get(id=log_id)
+
+            # Format the timestamp to a readable format
+            timestamp = localtime(log.timestamp).strftime('%Y-%m-%d %H:%M:%S')
+            user_full_name = log.user.get_full_name() if log.user else "Anonymous"
+            # user_username = log.user.username if log.user else "Anonymous"
+
+            # Construct the email subject and message
+            subject = f"Service Interaction Log for {log.service.vendor_name}"
+            message = f"""
+            Dear {log.service.vendor_name},
+
+            A new interaction log has been recorded for your service. Here are the details:
+
+            Service: {log.service.vendor_name}
+            Action: {log.action}
+            Timestamp: {timestamp}
+            User: {log.user.username if log.user else 'Anonymous'}
+            Full Name: {user_full_name}
+
+            Thank you,
+            Handcar Team
+            """
+
+            # Recipient email
+            recipient_list = [log.service.email]  # Replace with the actual service email field
+
+            # Send the email
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_list,
+            )
+
+            return JsonResponse({"message": "Log email sent successfully!"}, status=200)
+        except ServiceInteractionLog.DoesNotExist:
+            return JsonResponse({"error": "Log not found."}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": f"Error sending email: {str(e)}"}, status=500)
+
+    return JsonResponse({"error": "Invalid request method."}, status=405)
 @csrf_exempt
 def get_service_interaction_logs_admin(request):
     try:
@@ -2116,76 +2304,35 @@ def view_service_rating(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-#
-# @csrf_exempt
-# def get_nearby_services(request):
-#     user_lat = float(request.GET.get('lat'))  # User's latitude
-#     user_lng = float(request.GET.get('lng'))  # User's longitude
-#
-#     radius = 10  # Define the search radius in kilometers
-#
-#     nearby_services = []
-#
-#     # Loop through all services and check if they are within the radius
-#     for service in Services.objects.all():
-#         distance = haversine(user_lat, user_lng, service.latitude, service.longitude)
-#
-#
-#         if distance <= radius:
-#             nearby_services.append({
-#                 'name': service.vendor_name,
-#                 'latitude': service.latitude,
-#                 'longitude': service.longitude,
-#                 'distance': round(distance, 2)  # Include the distance
-#             })
-#
-#     return JsonResponse({'services': nearby_services}, status=200)
-#
-
-
 
 @csrf_exempt
 def get_nearby_services(request):
     try:
-        # Retrieve all services from the database
-        services = Services.objects.all()
+        user_lat = float(request.GET.get('lat'))  # User's latitude
+        user_lng = float(request.GET.get('lng'))  # User's longitude
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "Invalid Latitude or Longitude."}, status=400)
 
-        # Get filter parameters
-        user_lat = request.GET.get('lat')
-        user_lng = request.GET.get('lng')
-        radius = 20
-        services_data = []
+    radius = 10  # Define the search radius in kilometers
 
-        for service in services:
-            if user_lat and user_lng:
-                # Calculate distance if coordinates are provided
-                distance = haversine(float(user_lat), float(user_lng), service.latitude, service.longitude)
+    nearby_services = []
 
-                if distance > radius:
-                    continue  # Skip services outside the radius
+    # Loop through all services and check if they are within the radius
+    for service in Services.objects.all():
+        # Ensure service has valid latitude and longitude before calculating distance
+        if service.latitude is not None and service.longitude is not None:
+            # Calculate the distance only if both latitude and longitude are available
+            distance = haversine(user_lat, user_lng, service.latitude, service.longitude)
 
-            # Prepare service data
-            service_data = {
-                "id": service.id,
-                "vendor_name": service.vendor_name,
-                "phone_number": service.phone_number,
-                "whatsapp_number": service.whatsapp_number,
-                "service_category": service.service_category.name if service.service_category else None,
-                "service_details": service.service_details,
-                "address": service.address,
-                "rate": service.rate,
-                "images": [image.image.url for image in service.images.all()],
-            }
+            if distance <= radius:
+                nearby_services.append({
+                    'name': service.vendor_name,
+                    'latitude': service.latitude,
+                    'longitude': service.longitude,
+                    'distance': round(distance, 2)  # Include the distance
+                })
 
-            if user_lat and user_lng:
-                service_data['distance'] = round(distance, 2)  # Include distance if calculated
-
-            services_data.append(service_data)
-
-        return JsonResponse({"services": services_data}, status=200)
-
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+    return JsonResponse({'services': nearby_services}, status=200)
 
 
 
@@ -2294,6 +2441,7 @@ def view_services(request):
                  "price": vendor.phone_number,
                  "email": vendor.email} for vendor in vendors]
         return JsonResponse({"vendor": data}, safe=False)
+
 
 
 @csrf_exempt
@@ -2581,3 +2729,5 @@ def reset_password(request, uidb64, token):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+

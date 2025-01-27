@@ -2,6 +2,8 @@ from django.urls import path
 from . import views
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import AddToCartView, DisplayCartView, UpdateCartItemView
+
+
 urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('signup', views.signup, name='signup'),
@@ -82,8 +84,9 @@ urlpatterns = [
     path('set_default_address/<int:address_id>/', views.set_default_address, name='set_default_address'),
     path('shipping_address', views.shipping_address, name='shipping_address'),
 
-    path('log_service_interaction', views.log_service_interaction, name='log_service_interaction'),
+    path('log_service_interaction', views.LogServiceInteractionView.as_view(), name='log_service_interaction'),
     path('get_service_interaction_logs_admin', views.get_service_interaction_logs_admin, name='get_service_interaction_logs'),
+    path('send_log_email_view', views.send_log_email_view, name='send_log_email_view'),
 
 
     path('Edit_UserProfile_By_user', views.Edit_UserProfile_By_user.as_view(), name='Edit_UserProfile_By_user'),
@@ -115,10 +118,9 @@ urlpatterns = [
     path('forgot_password', views.forgot_password, name='forgot_password'),
     path('reset_password', views.reset_password, name='reset_password'),
 
-
-
-
-
+    path('get_logged_in_user', views.get_logged_in_user, name='get_logged_in_user'),
+    path('Vendor_Profile', views.Vendor_Profile, name='Vendor_Profile'),
+    path('Admin_Profile', views.Admin_Profile, name='Admin_Profile'),
 
 ]
 
