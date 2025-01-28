@@ -112,7 +112,6 @@ urlpatterns = [
 
 
     path('add_service_rating', views.add_service_rating, name='add_service_rating'),
-
     path('view_service_rating', views.view_service_rating, name='view_service_rating'),
 
 
@@ -122,6 +121,8 @@ urlpatterns = [
     path('get_logged_in_user', views.get_logged_in_user, name='get_logged_in_user'),
     path('Vendor_Profile', views.Vendor_Profile, name='Vendor_Profile'),
     path('Admin_Profile', views.Admin_Profile, name='Admin_Profile'),
+
+    path('refresh_token', views.refresh_token, name='refresh_token')
 
 ]
 

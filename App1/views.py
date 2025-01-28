@@ -2735,3 +2735,35 @@ def reset_password(request, uidb64, token):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+@csrf_exempt
+def refresh_token(request):
+    if request.method == "POST":
+        refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
+
+        if not refresh_token:
+            return JsonResponse({"error": "Refresh token missing"}, status=401)
+
+        try:
+            refresh = RefreshToken(refresh_token)
+            new_access_token = str(refresh.access_token)
+
+            response = JsonResponse({
+                "message": "Token refreshed successfully",
+                "access_token": new_access_token
+            })
+
+            response.set_cookie(
+                settings.SIMPLE_JWT['AUTH_COOKIE'],
+                new_access_token,
+                max_age=60 * 60,
+                httponly=True,
+                secure=True,
+                samesite='None'
+            )
+            return response
+        except jwt.ExpiredSignatureError:
+            return JsonResponse({"error": "Refresh token expired"}, status=401)
+        except jwt.DecodeError:
+            return JsonResponse({"error": "Invalid refresh token"}, status=401)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
