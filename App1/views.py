@@ -15,7 +15,7 @@ from django.core.exceptions import ValidationError
 from geopy.exc import GeocoderTimedOut
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.views import APIView
 from twilio.rest import Client
 import random
@@ -1929,7 +1929,10 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from .models import ServiceCategory
 
+
 @csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
 def add_service_category(request):
     if request.method == 'POST':
         try:
@@ -2376,9 +2379,67 @@ class Edit_UserProfile_By_user(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=500)
 
+#
+#
+# @csrf_exempt
+# def add_vendor_by_admin(request):
+#     if request.method == 'POST':
+#         try:
+#             # Parse JSON data from the request body
+#             data = json.loads(request.body)
+#
+#             vendor_name = data.get('vendor_name')
+#             phone_number = data.get('phone_number')
+#             email = data.get('email')
+#             password = data.get('password')
+#
+#             # Validate required fields
+#             if not vendor_name or not phone_number or not email or not password:
+#                 return JsonResponse({"error": "All fields are required."}, status=400)
+#
+#             # Validate email format
+#             try:
+#                 validate_email(email)
+#             except ValidationError:
+#                 return JsonResponse({"error": "Invalid email format."}, status=400)
+#
+#             # Check if email already exists
+#             if Services.objects.filter(email=email).exists():
+#                 return JsonResponse({"error": "Email already exists."}, status=400)
+#
+#             # Create the vendor
+#             vendor = Services.objects.create(
+#                 vendor_name=vendor_name,
+#                 phone_number=phone_number,
+#                 email=email,
+#                 password=password
+#             )
+#
+#             return JsonResponse({
+#                 "message": "Service Vendor added successfully.",
+#                 "Service": {
+#                     "id": vendor.id,
+#                     "vendor_name": vendor.vendor_name,
+#                     "phone_number": vendor.phone_number,
+#                     "email": vendor.email,
+#                 }
+#             }, status=201)
+#
+#         except json.JSONDecodeError:
+#             return JsonResponse({"error": "Invalid JSON data."}, status=400)
+#         except Exception as e:
+#             return JsonResponse({"error": str(e)}, status=500)
+#
+#     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+#
 
-
+from rest_framework.permissions import IsAdminUser
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from django.contrib.auth.decorators import login_required
 @csrf_exempt
+@api_view(['POST'])
+@permission_classes([IsAdminUser])  # Ensure only admin can access this view
 def add_vendor_by_admin(request):
     if request.method == 'POST':
         try:
@@ -2430,9 +2491,10 @@ def add_vendor_by_admin(request):
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
 
 
-
 @csrf_exempt
-def view_services(request):
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def view_services_by_admin(request):
     if request.method == 'GET':
         search_query = request.GET.get('search', '').strip()
         print("Search Query:", search_query)  # Debugging
@@ -2445,7 +2507,6 @@ def view_services(request):
                  "price": vendor.phone_number,
                  "email": vendor.email} for vendor in vendors]
         return JsonResponse({"vendor": data}, safe=False)
-
 
 
 @csrf_exempt
@@ -2525,8 +2586,11 @@ def edit_vendor_profile(request, vendor_id):
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
 
 
+
 @csrf_exempt
-def delete_service(request, service_id):
+@api_view(['DELETE'])
+@permission_classes([IsAdminUser])
+def delete_service_by_admin(request, service_id):
     if request.method == 'DELETE':
         try:
             # Retrieve the service by ID
@@ -2548,6 +2612,9 @@ def delete_service(request, service_id):
 
 
 @csrf_exempt
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
 def view_service_category(request):
     try:
         # Retrieve all categories
@@ -2569,7 +2636,9 @@ def view_service_category(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+
 @csrf_exempt
+@permission_classes([IsAdminUser])
 def edit_service_category(request, service_category_id):
     if request.method == 'GET':
         try:
@@ -2627,7 +2696,10 @@ def edit_service_category(request, service_category_id):
 
 
 
+
 @csrf_exempt
+@api_view(['DELETE'])
+@permission_classes([IsAdminUser])
 def delete_service_category(request, service_category_id):
     if request.method == 'DELETE':
         try:

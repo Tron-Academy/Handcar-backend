@@ -94,10 +94,10 @@ urlpatterns = [
 
 
     path('add_vendor_by_admin', views.add_vendor_by_admin, name='add_vendor_by_admin'),
-    path('view_services', views.view_services, name='view_services'),
-    path('edit_vendor_profile/<int:vendor_id>/', views.edit_vendor_profile, name='edit_vendor_profile'),
-    path('delete_service/<int:service_id>/',views.delete_service, name='delete_service'),
+    path('view_services_by_admin', views.view_services_by_admin, name='view_services_by_admin'),
+    path('delete_service/<int:service_id>/', views.delete_service_by_admin, name='delete_service_by_admin'),
 
+    path('edit_vendor_profile/<int:vendor_id>/', views.edit_vendor_profile, name='edit_vendor_profile'),
 
     path('add_service_category', views.add_service_category, name='add_service_category'),
     path('view_service_category', views.view_service_category, name='view_service_category'),
