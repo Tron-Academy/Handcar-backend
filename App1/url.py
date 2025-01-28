@@ -112,6 +112,7 @@ urlpatterns = [
 
 
     path('add_service_rating', views.add_service_rating, name='add_service_rating'),
+
     path('view_service_rating', views.view_service_rating, name='view_service_rating'),
 
 

@@ -2013,47 +2013,51 @@ def view_service_categories_user(request):
 #
 #     except Exception as e:
 #         return JsonResponse({"error": str(e)}, status=500)
+
 @csrf_exempt
 def view_service_user(request):
-    # Get latitude and longitude from the request (if available)
     try:
         user_lat = float(request.GET.get('lat')) if request.GET.get('lat') else None
         user_lng = float(request.GET.get('lng')) if request.GET.get('lng') else None
     except (TypeError, ValueError):
         return JsonResponse({"error": "Invalid Latitude or Longitude."}, status=400)
 
-    radius = 10  # Define the search radius in kilometers
-
+    radius = 20  # Define the search radius in kilometers
     nearby_services = []
 
-    # If latitude and longitude are provided, calculate nearby services
+    # If latitude and longitude are provided, calculate distances
     if user_lat is not None and user_lng is not None:
-        # Loop through all services and check if they are within the radius
         for service in Services.objects.all():
-            # Ensure service has valid latitude and longitude before calculating distance
             if service.latitude is not None and service.longitude is not None:
-                # Calculate the distance only if both latitude and longitude are available
                 distance = haversine(user_lat, user_lng, service.latitude, service.longitude)
 
                 if distance <= radius:
                     nearby_services.append({
-                        'name': service.vendor_name,
-                        'latitude': service.latitude,
-                        'longitude': service.longitude,
-                        'distance': round(distance, 2)  # Include the distance
+                        "id": service.id,
+                        "vendor_name": service.vendor_name,
+                        "phone_number": service.phone_number,
+                        "whatsapp_number": service.whatsapp_number,
+                        "service_category": service.service_category.name if service.service_category else None,
+                        "service_details": service.service_details,
+                        "address": service.address,
+                        "rate": service.rate,
+                        "images": [image.image.url for image in service.images.all()],
+                        "distance": round(distance, 2),
                     })
-        # If no nearby services were found
-        if not nearby_services:
-            return JsonResponse({"message": "No nearby services found within the radius."}, status=404)
 
-    # If latitude and longitude are not provided or invalid, return all services
-    else:
-        # Loop through all services and add them to the list
+    # If no latitude and longitude are provided, or no services found nearby, return all services
+    if not user_lat or not user_lng or not nearby_services:
         for service in Services.objects.all():
             nearby_services.append({
-                'name': service.vendor_name,
-                'latitude': service.latitude,
-                'longitude': service.longitude,
+                "id": service.id,
+                "vendor_name": service.vendor_name,
+                "phone_number": service.phone_number,
+                "whatsapp_number": service.whatsapp_number,
+                "service_category": service.service_category.name if service.service_category else None,
+                "service_details": service.service_details,
+                "address": service.address,
+                "rate": service.rate,
+                "images": [image.image.url for image in service.images.all()],
             })
 
     return JsonResponse({'services': nearby_services}, status=200)
@@ -2313,7 +2317,7 @@ def get_nearby_services(request):
     except (TypeError, ValueError):
         return JsonResponse({"error": "Invalid Latitude or Longitude."}, status=400)
 
-    radius = 10  # Define the search radius in kilometers
+    radius = 20  # Define the search radius in kilometers
 
     nearby_services = []
 
