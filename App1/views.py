@@ -1988,34 +1988,6 @@ def view_service_categories_user(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-#
-# @csrf_exempt
-# def view_service_user(request):
-#     try:
-#         # Retrieve all services from the database
-#         services = Services.objects.all()
-#
-#         # Prepare the list of services to return as JSON
-#         services_data = []
-#         for service in services:
-#             service_data = {
-#                 "id": service.id,
-#                 "vendor_name": service.vendor_name,
-#                 "phone_number": service.phone_number,
-#                 "whatsapp_number": service.whatsapp_number,
-#                 "service_category": service.service_category.name if service.service_category else None,
-#                 "service_details": service.service_details,
-#                 "address": service.address,
-#                 "rate": service.rate,
-#                 "images": [image.image.url for image in service.images.all()]
-#             }
-#             services_data.append(service_data)
-#
-#         # Return the services data as JSON
-#         return JsonResponse({"services": services_data}, status=200)
-#
-#     except Exception as e:
-#         return JsonResponse({"error": str(e)}, status=500)
 
 @csrf_exempt
 def view_service_user(request):
@@ -2193,7 +2165,10 @@ def send_log_email_view(request):
             return JsonResponse({"error": f"Error sending email: {str(e)}"}, status=500)
 
     return JsonResponse({"error": "Invalid request method."}, status=405)
+
+
 @csrf_exempt
+@permission_classes([IsAdminUser])
 def get_service_interaction_logs_admin(request):
     try:
         # Get query parameters
@@ -2611,7 +2586,7 @@ def delete_service_by_admin(request, service_id):
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
 
 
-@csrf_exempt
+
 @csrf_exempt
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
@@ -2807,15 +2782,19 @@ def reset_password(request, uidb64, token):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+
 @csrf_exempt
 def refresh_token(request):
     if request.method == "POST":
+        # Extract the refresh token from the cookies
         refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
 
+        # Check if the refresh token is present
         if not refresh_token:
             return JsonResponse({"error": "Refresh token missing"}, status=401)
 
         try:
+            # Try to create a RefreshToken object and generate a new access token
             refresh = RefreshToken(refresh_token)
             new_access_token = str(refresh.access_token)
 
@@ -2824,10 +2803,11 @@ def refresh_token(request):
                 "access_token": new_access_token
             })
 
+            # Set the new access token as a cookie
             response.set_cookie(
                 settings.SIMPLE_JWT['AUTH_COOKIE'],
                 new_access_token,
-                max_age=60 * 60,
+                max_age=60 * 60,  # 1 hour expiration for the access token
                 httponly=True,
                 secure=True,
                 samesite='None'
