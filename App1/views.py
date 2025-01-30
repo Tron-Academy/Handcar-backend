@@ -2170,6 +2170,7 @@ def send_log_email_view(request):
 
 
 @csrf_exempt
+@api_view(["GET"])  # Required for permission_classes to work
 @permission_classes([IsAdminUser])
 def get_service_interaction_logs_admin(request):
     try:
