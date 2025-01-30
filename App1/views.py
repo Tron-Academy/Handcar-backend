@@ -1487,7 +1487,9 @@ def view_subscribers(request):
         return JsonResponse({"user": data}, safe=False)
 
 
-
+@csrf_exempt
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
 def view_users_by_admin(request):
     if request.method == 'GET':
         search_query = request.GET.get('search', '')
@@ -2194,7 +2196,8 @@ def get_service_interaction_logs_admin(request):
                 "service_name": log.service.vendor_name,
                 "action": log.get_action_display(),  # Use display value for choices
                 "timestamp": log.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                "user_ip": log.user_ip,
+                "user_id": log.user_id,
+                "user_name": log.user.get_full_name() if log.user and log.user.get_full_name() else (log.user.username if log.user else "Unknown User")
             }
             for log in logs
         ]
