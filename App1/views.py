@@ -2094,6 +2094,8 @@ class LogServiceInteractionView(APIView):
                         user=user
                     )
                     log.save()
+                    # Send email after log is saved
+                    self.send_log_email(log)
 
                     log_timestamp_local = localtime(log.timestamp).strftime('%Y-%m-%d %H:%M:%S')
                     user_details = {
@@ -2116,23 +2118,13 @@ class LogServiceInteractionView(APIView):
             return Response({"error": "Service not found."}, status=404)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
-from django.shortcuts import render
-from django.core.mail import send_mail
-from django.http import HttpResponse
-from .models import ServiceInteractionLog
-@csrf_exempt
-def send_log_email_view(request):
-    if request.method == 'POST':
-        try:
-            log_id = request.POST.get('log_id')
-            log = ServiceInteractionLog.objects.get(id=log_id)
 
-            # Format the timestamp to a readable format
+    def send_log_email(self, log):
+        """Send an email notification when a log is created."""
+        try:
             timestamp = localtime(log.timestamp).strftime('%Y-%m-%d %H:%M:%S')
             user_full_name = log.user.get_full_name() if log.user else "Anonymous"
-            # user_username = log.user.username if log.user else "Anonymous"
 
-            # Construct the email subject and message
             subject = f"Service Interaction Log for {log.service.vendor_name}"
             message = f"""
             Dear {log.service.vendor_name},
@@ -2149,24 +2141,67 @@ def send_log_email_view(request):
             Handcar Team
             """
 
-            # Recipient email
-            recipient_list = [log.service.email]  # Replace with the actual service email field
+            recipient_list = [log.service.email]  # Ensure this field exists in your model
 
-            # Send the email
             send_mail(
                 subject=subject,
                 message=message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=recipient_list,
             )
-
-            return JsonResponse({"message": "Log email sent successfully!"}, status=200)
-        except ServiceInteractionLog.DoesNotExist:
-            return JsonResponse({"error": "Log not found."}, status=404)
         except Exception as e:
-            return JsonResponse({"error": f"Error sending email: {str(e)}"}, status=500)
-
-    return JsonResponse({"error": "Invalid request method."}, status=405)
+            print(f"Error sending email: {str(e)}")  # Log error
+# from django.shortcuts import render
+# from django.core.mail import send_mail
+# from django.http import HttpResponse
+# from .models import ServiceInteractionLog
+# @csrf_exempt
+# def send_log_email_view(request):
+#     if request.method == 'POST':
+#         try:
+#             log_id = request.POST.get('log_id')
+#             log = ServiceInteractionLog.objects.get(id=log_id)
+#
+#             # Format the timestamp to a readable format
+#             timestamp = localtime(log.timestamp).strftime('%Y-%m-%d %H:%M:%S')
+#             user_full_name = log.user.get_full_name() if log.user else "Anonymous"
+#             # user_username = log.user.username if log.user else "Anonymous"
+#
+#             # Construct the email subject and message
+#             subject = f"Service Interaction Log for {log.service.vendor_name}"
+#             message = f"""
+#             Dear {log.service.vendor_name},
+#
+#             A new interaction log has been recorded for your service. Here are the details:
+#
+#             Service: {log.service.vendor_name}
+#             Action: {log.action}
+#             Timestamp: {timestamp}
+#             User: {log.user.username if log.user else 'Anonymous'}
+#             Full Name: {user_full_name}
+#
+#             Thank you,
+#             Handcar Team
+#             """
+#
+#             # Recipient email
+#             recipient_list = [log.service.email]  # Replace with the actual service email field
+#
+#             # Send the email
+#             send_mail(
+#                 subject=subject,
+#                 message=message,
+#                 from_email=settings.DEFAULT_FROM_EMAIL,
+#                 recipient_list=recipient_list,
+#             )
+#
+#             return JsonResponse({"message": "Log email sent successfully!"}, status=200)
+#         except ServiceInteractionLog.DoesNotExist:
+#             return JsonResponse({"error": "Log not found."}, status=404)
+#         except Exception as e:
+#             return JsonResponse({"error": f"Error sending email: {str(e)}"}, status=500)
+#
+#     return JsonResponse({"error": "Invalid request method."}, status=405)
 
 
 @csrf_exempt
