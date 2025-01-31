@@ -87,7 +87,7 @@ urlpatterns = [
     path('log_service_interaction', views.LogServiceInteractionView.as_view(), name='log_service_interaction'),
     path('get_service_interaction_logs_admin', views.get_service_interaction_logs_admin, name='get_service_interaction_logs'),
     # path('send_log_email_view', views.send_log_email_view, name='send_log_email_view'),
-
+    path('vendor_service_requests', views.vendor_service_requests, name='vendor-service-requests'),
 
     path('Edit_UserProfile_By_user', views.Edit_UserProfile_By_user.as_view(), name='Edit_UserProfile_By_user'),
     path('view_users_by_admin', views.view_users_by_admin, name='view_users_by_admin'),

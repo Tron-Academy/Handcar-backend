@@ -265,13 +265,17 @@ class ServiceInteractionLog(models.Model):
         ('CALL', 'Call'),
         ('WHATSAPP', 'WhatsApp Message'),
     ]
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('ACCEPTED', 'Accepted'),
+        ('DECLINED', 'Declined'),
+    ]
 
     service = models.ForeignKey('Services', on_delete=models.CASCADE, related_name='interaction_logs')
     action = models.CharField(max_length=10, choices=ACTION_CHOICES)
     timestamp = models.DateTimeField(default=timezone.now)
-    user_ip = models.GenericIPAddressField(null=True, blank=True)  # Optional: To capture user IP address
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
     def __str__(self):
         return f"{self.action} - {self.service.vendor_name} at {self.timestamp}"
 

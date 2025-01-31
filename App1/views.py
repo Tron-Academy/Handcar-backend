@@ -2151,6 +2151,63 @@ class LogServiceInteractionView(APIView):
             )
         except Exception as e:
             print(f"Error sending email: {str(e)}")  # Log error
+
+#
+# class VendorServiceRequestsView(APIView):
+#     authentication_classes = [CustomJWTAuthentication]
+#     permission_classes = [IsAuthenticated]
+def vendor_service_requests(request):
+    if request.method == "GET":
+        service_id = request.GET.get("service_id")  # Get service_id from query params
+
+        if not service_id:
+            return JsonResponse({"error": "Service ID is required."}, status=400)
+
+        try:
+            service = Services.objects.get(id=service_id)  # Fetch the specific service
+
+            logs = ServiceInteractionLog.objects.filter(service=service, status="PENDING")  # Filter logs
+
+            data = [{
+                "id": log.id,
+                "service": log.service.vendor_name,
+                "action": log.action,
+                "timestamp": localtime(log.timestamp).strftime('%Y-%m-%d %H:%M:%S'),
+                "user": log.user.username if log.user else "Anonymous",
+                "status": log.status
+            } for log in logs]
+
+            return JsonResponse({"requests": data}, status=200)
+
+        except Services.DoesNotExist:
+            return JsonResponse({"error": "Service not found."}, status=404)
+
+    return JsonResponse({"error": "Invalid request method."}, status=405)
+
+
+class UpdateServiceRequestStatusView(APIView):
+    authentication_classes = [CustomJWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        log_id = request.data.get("log_id")
+        status = request.data.get("status")  # Should be 'ACCEPTED' or 'DECLINED'
+
+        if status not in ['ACCEPTED', 'DECLINED']:
+            return Response({"error": "Invalid status"}, status=400)
+
+        try:
+            log = ServiceInteractionLog.objects.get(id=log_id, service__vendor=request.user)
+            log.status = status
+            log.save()
+
+            return Response({"message": f"Request {status.lower()} successfully!"}, status=200)
+
+        except ServiceInteractionLog.DoesNotExist:
+            return Response({"error": "Request not found or unauthorized"}, status=404)
+
+
+
 # from django.shortcuts import render
 # from django.core.mail import send_mail
 # from django.http import HttpResponse
@@ -2822,39 +2879,113 @@ def reset_password(request, uidb64, token):
 
 
 
-@csrf_exempt
-def refresh_token(request):
-    if request.method == "POST":
-        # Extract the refresh token from the cookies
-        refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
+# @csrf_exempt
+# def refresh_token(request):
+#     if request.method == "POST":
+#         # Extract the refresh token from the cookies
+#         refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
+#
+#         # Check if the refresh token is present
+#         if not refresh_token:
+#             return JsonResponse({"error": "Refresh token missing"}, status=401)
+#
+#         try:
+#             # Try to create a RefreshToken object and generate a new access token
+#             refresh = RefreshToken(refresh_token)
+#             new_access_token = str(refresh.access_token)
+#
+#             response = JsonResponse({
+#                 "message": "Token refreshed successfully",
+#                 "access_token": new_access_token
+#             })
+#
+#             # Set the new access token as a cookie
+#             response.set_cookie(
+#                 settings.SIMPLE_JWT['AUTH_COOKIE'],
+#                 new_access_token,
+#                 max_age=60 * 60,  # 1 hour expiration for the access token
+#                 httponly=True,
+#                 secure=True,
+#                 samesite='None'
+#             )
+#             return response
+#         except jwt.ExpiredSignatureError:
+#             return JsonResponse({"error": "Refresh token expired"}, status=401)
+#         except jwt.DecodeError:
+#             return JsonResponse({"error": "Invalid refresh token"}, status=401)
+#
+#     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-        # Check if the refresh token is present
+
+from datetime import datetime, timedelta
+from django.http import JsonResponse
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.conf import settings
+import jwt
+from rest_framework.decorators import api_view
+from rest_framework.exceptions import AuthenticationFailed
+from django.contrib.auth import get_user_model
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import permission_classes
+
+User = get_user_model()
+
+
+@api_view(['POST'])
+def refresh_token(request):
+    try:
+        # Get token from either cookie or request body
+        refresh_token = request.COOKIES.get('refresh_token') or request.data.get('refresh')
+
         if not refresh_token:
-            return JsonResponse({"error": "Refresh token missing"}, status=401)
+            return JsonResponse({"error": "Refresh token not found"}, status=401)
 
         try:
-            # Try to create a RefreshToken object and generate a new access token
-            refresh = RefreshToken(refresh_token)
-            new_access_token = str(refresh.access_token)
-
-            response = JsonResponse({
-                "message": "Token refreshed successfully",
-                "access_token": new_access_token
-            })
-
-            # Set the new access token as a cookie
-            response.set_cookie(
-                settings.SIMPLE_JWT['AUTH_COOKIE'],
-                new_access_token,
-                max_age=60 * 60,  # 1 hour expiration for the access token
-                httponly=True,
-                secure=True,
-                samesite='None'
+            # Verify the refresh token
+            payload = jwt.decode(
+                refresh_token,
+                settings.SECRET_KEY,
+                algorithms=["HS256"]
             )
-            return response
+            user = User.objects.get(id=payload['user_id'])
         except jwt.ExpiredSignatureError:
-            return JsonResponse({"error": "Refresh token expired"}, status=401)
-        except jwt.DecodeError:
+            return JsonResponse({"error": "Refresh token has expired"}, status=401)
+        except (jwt.DecodeError, User.DoesNotExist):
             return JsonResponse({"error": "Invalid refresh token"}, status=401)
 
-    return JsonResponse({"error": "Invalid request method"}, status=405)
+        refresh = RefreshToken(refresh_token)
+        access_token = str(refresh.access_token)
+
+        # Generate new refresh token
+        new_refresh = RefreshToken.for_user(user)
+
+        response = JsonResponse({
+            "access": access_token,
+            "refresh": str(new_refresh)
+        })
+
+        # Set cookies with proper configuration
+        response.set_cookie(
+            'access_token',
+            access_token,
+            max_age=settings.SIMPLE_JWT.get('ACCESS_TOKEN_LIFETIME', timedelta(hours=1)).total_seconds(),
+            httponly=True,
+            secure=True,
+            samesite='None'
+        )
+
+        response.set_cookie(
+            'refresh_token',
+            str(new_refresh),
+            max_age=settings.SIMPLE_JWT.get('REFRESH_TOKEN_LIFETIME', timedelta(days=30)).total_seconds(),
+            httponly=True,
+            secure=True,
+            samesite='None'
+        )
+
+        return response
+
+    except Exception as e:
+        return JsonResponse({
+            "error": f"Token refresh failed: {str(e)}"
+        }, status=500)
