@@ -1,7 +1,9 @@
+from django.contrib.auth.models import User
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.conf import settings
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 import jwt
+from .models import Services  # Import your Vendor model
 
 
 class CustomJWTAuthentication(JWTAuthentication):
@@ -40,6 +42,8 @@ class CustomJWTAuthentication(JWTAuthentication):
             raise AuthenticationFailed('Token has expired')
         except jwt.DecodeError:
             raise AuthenticationFailed('Error decoding token')
+        except User.DoesNotExist:
+            raise AuthenticationFailed('User does not exist')
         except Exception as e:
             raise AuthenticationFailed(f'Authentication failed: {str(e)}')
 

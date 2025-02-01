@@ -20,6 +20,8 @@ from rest_framework.views import APIView
 from twilio.rest import Client
 import random
 from django.core.cache import cache
+
+from .authentication import CustomJWTAuthentication
 from .models import Product, WishlistItem, CartItem, Review, Address, Category, Brand, Coupon, Plan, Subscriber, \
     Subscription, Services, ServiceCategory, ServiceImage, ServiceInteractionLog, Service_Rating
 from .utils import geocode_address
@@ -191,58 +193,59 @@ from rest_framework.exceptions import AuthenticationFailed
 import jwt
 from django.conf import settings
 
+#
+# class CustomJWTAuthentication(JWTAuthentication):
+#     def authenticate(self, request):
+#         # Retrieve the token from the cookie using the name specified in settings.py
+#         token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE'])
+#         if not token:
+#             raise AuthenticationFailed('Authentication token not found in cookies')
+#
+#         # Use the standard JWTAuthentication method to decode and authenticate the token
+#         return self.authenticate_credentials(token)
+#
+#     def authenticate_credentials(self, token):
+#         """
+#         Custom implementation of authenticate_credentials to handle the JWT token
+#         passed from the cookie and verify the credentials.
+#         """
+#         try:
+#             # Decode the JWT token using the secret key and algorithm defined in settings
+#             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+#
+#             # Extract user information from the payload
+#             user_id = payload.get('user_id')  # Ensure the user_id field is in your token's payload
+#             if not user_id:
+#                 raise AuthenticationFailed('User ID not found in token')
+#
+#             # Retrieve the user from the database
+#             user = self.get_user(user_id)
+#             if user is None:
+#                 raise AuthenticationFailed('User not found')
+#
+#             # Return the authenticated user and the token
+#             return (user, token)
+#
+#         except jwt.ExpiredSignatureError:
+#             raise AuthenticationFailed('Token has expired')
+#         except jwt.DecodeError:
+#             raise AuthenticationFailed('Error decoding token')
+#         except User.DoesNotExist:
+#             raise AuthenticationFailed('User does not exist')
+#         except Exception as e:
+#             raise AuthenticationFailed(f'Authentication failed: {str(e)}')
+#
+#     def get_user(self, user_id):
+#         """
+#         Helper method to get the user by ID.
+#         Adjust this method according to your project's User model.
+#         """
+#         from django.contrib.auth.models import User  # Or your custom user model
+#         try:
+#             return User.objects.get(id=user_id)
+#         except User.DoesNotExist:
+#             return None
 
-class CustomJWTAuthentication(JWTAuthentication):
-    def authenticate(self, request):
-        # Retrieve the token from the cookie using the name specified in settings.py
-        token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE'])
-        if not token:
-            raise AuthenticationFailed('Authentication token not found in cookies')
-
-        # Use the standard JWTAuthentication method to decode and authenticate the token
-        return self.authenticate_credentials(token)
-
-    def authenticate_credentials(self, token):
-        """
-        Custom implementation of authenticate_credentials to handle the JWT token
-        passed from the cookie and verify the credentials.
-        """
-        try:
-            # Decode the JWT token using the secret key and algorithm defined in settings
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-
-            # Extract user information from the payload
-            user_id = payload.get('user_id')  # Ensure the user_id field is in your token's payload
-            if not user_id:
-                raise AuthenticationFailed('User ID not found in token')
-
-            # Retrieve the user from the database
-            user = self.get_user(user_id)
-            if user is None:
-                raise AuthenticationFailed('User not found')
-
-            # Return the authenticated user and the token
-            return (user, token)
-
-        except jwt.ExpiredSignatureError:
-            raise AuthenticationFailed('Token has expired')
-        except jwt.DecodeError:
-            raise AuthenticationFailed('Error decoding token')
-        except User.DoesNotExist:
-            raise AuthenticationFailed('User does not exist')
-        except Exception as e:
-            raise AuthenticationFailed(f'Authentication failed: {str(e)}')
-
-    def get_user(self, user_id):
-        """
-        Helper method to get the user by ID.
-        Adjust this method according to your project's User model.
-        """
-        from django.contrib.auth.models import User  # Or your custom user model
-        try:
-            return User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return None
 
 
 class AddToCartView(APIView):
@@ -2152,10 +2155,7 @@ class LogServiceInteractionView(APIView):
         except Exception as e:
             print(f"Error sending email: {str(e)}")  # Log error
 
-#
-# class VendorServiceRequestsView(APIView):
-#     authentication_classes = [CustomJWTAuthentication]
-#     permission_classes = [IsAuthenticated]
+
 def vendor_service_requests(request):
     if request.method == "GET":
         service_id = request.GET.get("service_id")  # Get service_id from query params
@@ -2411,7 +2411,6 @@ def get_nearby_services(request):
                 })
 
     return JsonResponse({'services': nearby_services}, status=200)
-
 
 
 class Edit_UserProfile_By_user(APIView):
@@ -2917,75 +2916,4 @@ def reset_password(request, uidb64, token):
 #     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
-from datetime import datetime, timedelta
-from django.http import JsonResponse
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.conf import settings
-import jwt
-from rest_framework.decorators import api_view
-from rest_framework.exceptions import AuthenticationFailed
-from django.contrib.auth import get_user_model
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import permission_classes
 
-User = get_user_model()
-
-
-@api_view(['POST'])
-def refresh_token(request):
-    try:
-        # Get token from either cookie or request body
-        refresh_token = request.COOKIES.get('refresh_token') or request.data.get('refresh')
-
-        if not refresh_token:
-            return JsonResponse({"error": "Refresh token not found"}, status=401)
-
-        try:
-            # Verify the refresh token
-            payload = jwt.decode(
-                refresh_token,
-                settings.SECRET_KEY,
-                algorithms=["HS256"]
-            )
-            user = User.objects.get(id=payload['user_id'])
-        except jwt.ExpiredSignatureError:
-            return JsonResponse({"error": "Refresh token has expired"}, status=401)
-        except (jwt.DecodeError, User.DoesNotExist):
-            return JsonResponse({"error": "Invalid refresh token"}, status=401)
-
-        refresh = RefreshToken(refresh_token)
-        access_token = str(refresh.access_token)
-
-        # Generate new refresh token
-        new_refresh = RefreshToken.for_user(user)
-
-        response = JsonResponse({
-            "access": access_token,
-            "refresh": str(new_refresh)
-        })
-
-        # Set cookies with proper configuration
-        response.set_cookie(
-            'access_token',
-            access_token,
-            max_age=settings.SIMPLE_JWT.get('ACCESS_TOKEN_LIFETIME', timedelta(hours=1)).total_seconds(),
-            httponly=True,
-            secure=True,
-            samesite='None'
-        )
-
-        response.set_cookie(
-            'refresh_token',
-            str(new_refresh),
-            max_age=settings.SIMPLE_JWT.get('REFRESH_TOKEN_LIFETIME', timedelta(days=30)).total_seconds(),
-            httponly=True,
-            secure=True,
-            samesite='None'
-        )
-
-        return response
-
-    except Exception as e:
-        return JsonResponse({
-            "error": f"Token refresh failed: {str(e)}"
-        }, status=500)
