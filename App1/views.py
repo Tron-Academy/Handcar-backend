@@ -2878,42 +2878,44 @@ def reset_password(request, uidb64, token):
 
 
 
-# @csrf_exempt
-# def refresh_token(request):
-#     if request.method == "POST":
-#         # Extract the refresh token from the cookies
-#         refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
-#
-#         # Check if the refresh token is present
-#         if not refresh_token:
-#             return JsonResponse({"error": "Refresh token missing"}, status=401)
-#
-#         try:
-#             # Try to create a RefreshToken object and generate a new access token
-#             refresh = RefreshToken(refresh_token)
-#             new_access_token = str(refresh.access_token)
-#
-#             response = JsonResponse({
-#                 "message": "Token refreshed successfully",
-#                 "access_token": new_access_token
-#             })
-#
-#             # Set the new access token as a cookie
-#             response.set_cookie(
-#                 settings.SIMPLE_JWT['AUTH_COOKIE'],
-#                 new_access_token,
-#                 max_age=60 * 60,  # 1 hour expiration for the access token
-#                 httponly=True,
-#                 secure=True,
-#                 samesite='None'
-#             )
-#             return response
-#         except jwt.ExpiredSignatureError:
-#             return JsonResponse({"error": "Refresh token expired"}, status=401)
-#         except jwt.DecodeError:
-#             return JsonResponse({"error": "Invalid refresh token"}, status=401)
-#
-#     return JsonResponse({"error": "Invalid request method"}, status=405)
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 
+@csrf_exempt
+def refresh_token(request):
+    if request.method == "POST":
+        # Extract the refresh token from the cookies
+        refresh_token = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
 
+        # Check if the refresh token is present
+        if not refresh_token:
+            return JsonResponse({"error": "Refresh token missing"}, status=401)
+
+        try:
+            # Try to create a RefreshToken object and generate a new access token
+            refresh = RefreshToken(refresh_token)
+            new_access_token = str(refresh.access_token)
+
+            response = JsonResponse({
+                "message": "Token refreshed successfully",
+                "access_token": new_access_token
+            })
+
+            # Set the new access token as a cookie
+            response.set_cookie(
+                settings.SIMPLE_JWT['AUTH_COOKIE'],
+                new_access_token,
+                max_age=60 * 60,  # 1 hour expiration for the access token
+                httponly=True,
+                secure=True,
+                samesite='None'
+            )
+            return response
+        except TokenError:
+            return JsonResponse({"error": "Invalid or expired refresh token"}, status=401)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
 
