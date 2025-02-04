@@ -2616,7 +2616,6 @@ def edit_vendor_profile(request, vendor_id):
             # Update fields if provided
             vendor.vendor_name = data.get('vendor_name', vendor.vendor_name)  # Vendor can edit name
             vendor.email = data.get('email', vendor.email)  # Vendor can edit email
-            vendor.password = data.get('password', vendor.password)  # Vendor can change password
             vendor.phone_number = data.get('phone_number', vendor.phone_number)  # Vendor can edit phone number
 
             # Vendor-specific fields that only vendors can update
@@ -2919,3 +2918,39 @@ def refresh_token(request):
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.hashers import check_password
+
+@csrf_exempt
+def change_vendor_password(request, vendor_id):
+    if request.method == 'POST':
+        try:
+            # Retrieve the vendor
+            vendor = get_object_or_404(Services, id=vendor_id)
+
+            # Parse JSON data
+            data = json.loads(request.body.decode('utf-8'))
+            old_password = data.get('old_password')
+            new_password = data.get('new_password')
+
+            # Validate input
+            if not old_password or not new_password:
+                return JsonResponse({"error": "Both old and new passwords are required."}, status=400)
+
+            # Check if the old password is correct
+            if not check_password(old_password, vendor.password):
+                return JsonResponse({"error": "Old password is incorrect."}, status=401)
+
+            # Update password securely
+            vendor.set_password(new_password)
+            vendor.save()
+
+            return JsonResponse({"message": "Password updated successfully."}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid HTTP method."}, status=405)

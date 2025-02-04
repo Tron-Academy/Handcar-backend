@@ -122,7 +122,8 @@ urlpatterns = [
     path('Vendor_Profile', views.Vendor_Profile, name='Vendor_Profile'),
     path('Admin_Profile', views.Admin_Profile, name='Admin_Profile'),
 
-    path('refresh_token', views.refresh_token, name='refresh_token')
+    path('refresh_token', views.refresh_token, name='refresh_token'),
+    path('change_vendor_password', views.change_vendor_password, name='change_vendor_password')
 
 ]
 
