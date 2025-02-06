@@ -1629,7 +1629,7 @@ def UserLogin(request):
 
             response.set_cookie(
                 'access_token', str(refresh.access_token),
-                max_age=60 * 60,
+                max_age=30 * 24 * 60 * 60,
                 httponly=True,
                 secure= True,  # True for production (HTTPS)
                 samesite='None' # Allow cross-origin cookies
@@ -1646,6 +1646,8 @@ def UserLogin(request):
         return JsonResponse({"error": "Invalid user credentials"}, status=401)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
 @csrf_exempt
 def RefreshAccessToken(request):
     refresh_token = request.COOKIES.get('refresh_token')
