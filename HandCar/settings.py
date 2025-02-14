@@ -135,40 +135,17 @@ WSGI_APPLICATION = 'HandCar.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 #
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'postgres',
-#         'USER': 'postgres',
-#         'PASSWORD': 'admin',
-#         'HOST': 'localhost',
-#         'PORT': '5432',
-#
-#     }
-#
-# }
-
-# import dj_database_url
-# from decouple import config
-# DATABASES = {
-#     'default': dj_database_url.config(
-#         default=config('DATABASE_URL')  # DATABASE_URL environment variable
-#     )
-# }
-#
-# print(config('DATABASE_URL'))  # Check if it prints the correct value
-import dj_database_url
-from decouple import config
-
-# Add error handling and default value
-DATABASE_URL = config('DATABASE_URL', default=None)
-if not DATABASE_URL:
-    raise ValueError("No DATABASE_URL set in environment")
-
-print(f"Attempting to connect to: {DATABASE_URL}")  # Debug print
-
 DATABASES = {
-    'default': dj_database_url.parse(DATABASE_URL)
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'HandcarDB',
+        'USER': 'postgres',
+        'PASSWORD': 'Tron25Handcar',
+        'HOST': 'database-1.cr820eg6e7lj.ap-south-1.rds.amazonaws.com',
+        'PORT': '5432',
+
+    }
+
 }
 
 
