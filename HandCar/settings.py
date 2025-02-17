@@ -42,7 +42,7 @@ SECRET_KEY = 'django-insecure-g*6$8q350_^v7k=e-%ky4$&nn48ds8=&mvpqi5&)j=d_n5b(b!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*', '127.0.0.1', 'localhost', 'handcar-backend-1.onrender.com' ]
+ALLOWED_HOSTS = ['*', '127.0.0.1', 'localhost', '3.109.148.149' ]
 
 
 
@@ -132,9 +132,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'HandCar.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-#
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
