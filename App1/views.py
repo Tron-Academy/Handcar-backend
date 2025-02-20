@@ -413,7 +413,7 @@ def filter_products(request):
 
 
 import logging
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from urllib.parse import quote
 from django.views.decorators.csrf import csrf_exempt
 
@@ -2935,4 +2935,4 @@ def change_vendor_password(request, vendor_id):
 
 
 def home(request):
-    return JsonResponse({"message": "API is running"}, status=200)
+    return HttpResponse({"Hi handcar")
