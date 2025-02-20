@@ -2935,4 +2935,4 @@ def change_vendor_password(request, vendor_id):
 
 
 def home(request):
-    return HttpResponse({"Hi handcar")
+    return HttpResponse("Hi handcar")
