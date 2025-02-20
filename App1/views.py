@@ -2932,3 +2932,7 @@ def change_vendor_password(request, vendor_id):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid HTTP method."}, status=405)
+
+
+def home(request):
+    return JsonResponse({"message": "API is running"}, status=200)

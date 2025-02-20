@@ -5,6 +5,7 @@ from .views import AddToCartView, DisplayCartView, UpdateCartItemView
 
 
 urlpatterns = [
+    path('', views.home, name='home'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('signup', views.signup, name='signup'),
     path('generate/otp/', views.generate_otp, name='generate_otp'),
