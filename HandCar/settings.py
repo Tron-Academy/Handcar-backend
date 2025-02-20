@@ -49,7 +49,8 @@ ALLOWED_HOSTS = ['localhost', '3.109.148.149', 'whimsical-sprite-caea63.netlify.
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://localhost:3000',
-
+    'https://whimsical-sprite-caea63.netlify.app',
+    'https://handcar-admin.netlify.app',
 ]
 
 CORS_ALLOW_CREDENTIALS = True
